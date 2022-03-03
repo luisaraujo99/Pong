@@ -10,16 +10,16 @@ class Paddle:
     VERT_PAD_WIDTH = 20
     VERT_PAD_HEIGHT = 100
 
-    def __init__(self, x, y, width, heigth, vertical):
+    def __init__(self, x, y, width, height, vertical):
         self.x = self.original_x = x
         self.y = self.original_y = y
-        self.heigth = heigth
+        self.height = height
         self.width = width
         self.vertical = vertical
 
     def draw(self, win):
         pygame.draw.rect(
-            win, WHITE, (self.x, self.y, self.width, self.heigth))
+            win, WHITE, (self.x, self.y, self.width, self.height))
 
     def move2(self, positive=True, window_height=500, window_width=700):
         if self.vertical == False:
