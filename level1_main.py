@@ -24,9 +24,9 @@ class PongGame:
 
             keys = pygame.key.get_pressed()
             if keys[pygame.K_RIGHT]:
-                self.game.paddle.move1(True)
+                self.game.paddle.move(False,True,window_width=WIDTH)
             elif keys[pygame.K_LEFT]:
-                self.game.paddle.move1(False)
+                self.game.paddle.move(False,False,window_width=WIDTH)
 
             self.game.draw()
             pygame.display.update()

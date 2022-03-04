@@ -13,6 +13,7 @@ class FourPadPong:
 
     WHITE = (255, 255, 255)
     BLACK = (0, 0, 0)
+    GREY = (171,220,251)
     SCORE_FONT = pygame.font.SysFont("comicsans", 50)
     HORIZ_PAD_WIDTH = 100
     HORIZ_PAD_HEIGHT = 20
@@ -41,8 +42,8 @@ class FourPadPong:
         self.window = window
 
     def draw_score(self):
-        score_text = self.SCORE_FONT.render(f"{self.score}", 1, self.WHITE)
-        self.window.blit(score_text, (15, 20))
+        score_text = self.SCORE_FONT.render(f"{self.score}", 1, self.GREY)
+        self.window.blit(score_text, (self.window_width//2, self.window_height//2))
 
     def handle_collision(self):
         # upper wall

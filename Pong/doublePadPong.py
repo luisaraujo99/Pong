@@ -12,6 +12,7 @@ class DoublePadPong:
     pygame.init()
 
     WHITE = (255, 255, 255)
+    CYAN = (0,255,255)
     BLACK = (0, 0, 0)
     SCORE_FONT = pygame.font.SysFont("comicsans", 50)
     HORIZ_PAD_WIDTH = 100
@@ -27,7 +28,7 @@ class DoublePadPong:
         self.paddle_H2 = Paddle(self.window_width//2 -
                              self.HORIZ_PAD_WIDTH//2, 10, self.HORIZ_PAD_WIDTH, self.HORIZ_PAD_HEIGHT, False)
         
-        self.ball = Ball(self.window_width // 2, self.window_height // 5)
+        self.ball = Ball(self.window_width // 2, self.window_height // 2)
 
         self.score = 0
         self.window = window
@@ -35,6 +36,7 @@ class DoublePadPong:
     def draw_score(self):
         score_text = self.SCORE_FONT.render(f"{self.score}", 1, self.WHITE)
         self.window.blit(score_text, (15, 20))
+        
 
     def handle_collision(self):
         # upper wall
@@ -42,13 +44,13 @@ class DoublePadPong:
             self.ball.reset()
             return -1
         # right wall
-        elif self.ball.x + self.ball.RADIUS >= self.window_width:
-            self.ball.reset()
-            return -1
+        elif self.ball.x + self.ball.RADIUS >= self.window_width-4:
+            self.ball.x_vel *= -1
+            return 0
         # left wall
-        elif self.ball.x - self.ball.RADIUS <= 0:
-            self.ball.reset()
-            return -1
+        elif self.ball.x - self.ball.RADIUS <= 4:
+            self.ball.x_vel *= -1
+            return 0
         elif self.ball.y > self.window_height:
             self.ball.reset()
             return -1
@@ -83,13 +85,25 @@ class DoublePadPong:
                     self.ball.x_vel = -x_vel
                     return 1
         return 0
+    
+    def draw_line(self):
+        for i in range(10, self.window_width-10, self.window_width//25):
+            if i % 2 == 1:
+                continue
+            pygame.draw.rect(
+                self.window, self.CYAN, (i, self.window_height//2, 10, 2))
+
 
     def draw(self):
         self.window.fill(self.BLACK)
+        pygame.draw.rect(self.window,self.CYAN,(0,0,5,self.window_height))
+        pygame.draw.rect(self.window,self.CYAN,(self.window_width-5,0,5,self.window_height))
+        self.draw_line()
         self.draw_score()
         self.paddle_H1.draw(self.window)
         self.paddle_H2.draw(self.window)        
         self.ball.draw(self.window)
+        
 
     def loop(self):
         self.ball.move()

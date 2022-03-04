@@ -12,6 +12,7 @@ class SinglePadPong:
     pygame.init()
 
     WHITE = (255, 255, 255)
+    CYAN = (0,255,255)
     BLACK = (0, 0, 0)
     SCORE_FONT = pygame.font.SysFont("comicsans", 50)
     HORIZ_PAD_WIDTH = 100
@@ -34,17 +35,18 @@ class SinglePadPong:
 
     def handle_collision(self):
         # upper wall
-        if self.ball.y - self.ball.RADIUS <= 0:
+        if self.ball.y - self.ball.RADIUS <= 4:
             self.ball.y_vel *= -1
             return 0
         # right wall
-        elif self.ball.x + self.ball.RADIUS >= self.window_width:
+        elif self.ball.x + self.ball.RADIUS >= self.window_width-4:
             self.ball.x_vel *= -1
             return 0
         # left wall
-        elif self.ball.x - self.ball.RADIUS <= 0:
+        elif self.ball.x - self.ball.RADIUS <= 4:
             self.ball.x_vel *= -1
             return 0
+        # didn't catch
         elif self.ball.y > self.window_height:
             self.ball.reset()
             if self.score > 0:
@@ -70,6 +72,9 @@ class SinglePadPong:
 
     def draw(self):
         self.window.fill(self.BLACK)
+        pygame.draw.rect(self.window,self.CYAN,(0,0,5,self.window_height))
+        pygame.draw.rect(self.window,self.CYAN,(self.window_width-5,0,5,self.window_height))
+        pygame.draw.rect(self.window,self.CYAN,(0,0,self.window_width,5))
         self.draw_score()
         self.paddle.draw(self.window)
         self.ball.draw(self.window)

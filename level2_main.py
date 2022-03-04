@@ -1,48 +1,40 @@
-from Pong import SinglePadPong
-from Pong import FourPadPong
+from Pong import DoublePadPong
 import pygame
 
 WIDTH, HEIGHT = 800, 600
-
+WHITE = (255, 255, 255)
 
 class PongGame:
     def __init__(self, window, width, height):
-        self.game = FourPadPong(window, width, height)
+        self.game = DoublePadPong(window, width, height)
         self.ball = self.game.ball
-        self.paddle = self.game.paddle_V1
-
+        self.paddle = self.game.paddle_H1
+        
+        
     def test_ai(self):
         clock = pygame.time.Clock()
         run = True
         while run:
             clock.tick(60)
             game_info = self.game.loop()
+            
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     run = False
                     break
-
+            
             keys = pygame.key.get_pressed()
             if keys[pygame.K_RIGHT]:
-                self.game.paddle_H1.move2(True, HEIGHT, WIDTH)
+                self.game.paddle_H1.move(False,True,window_width=WIDTH)
             elif keys[pygame.K_LEFT]:
-                self.game.paddle_H1.move2(False, HEIGHT, WIDTH)
+                self.game.paddle_H1.move(False,False,window_width=WIDTH)
 
             if keys[pygame.K_d]:
-                self.game.paddle_H2.move2(True, HEIGHT, WIDTH)
+                self.game.paddle_H2.move(False,True,window_width=WIDTH)
             elif keys[pygame.K_a]:
-                self.game.paddle_H2.move2(False, HEIGHT, WIDTH)
+                self.game.paddle_H2.move(False,False,window_width=WIDTH)
 
-            if keys[pygame.K_w]:
-                self.game.paddle_V1.move2(False, HEIGHT, WIDTH)
-            elif keys[pygame.K_s]:
-                self.game.paddle_V1.move2(True, HEIGHT, WIDTH)
-
-            if keys[pygame.K_UP]:
-                self.game.paddle_V2.move2(False, HEIGHT, WIDTH)
-            elif keys[pygame.K_DOWN]:
-                self.game.paddle_V2.move2(True, HEIGHT, WIDTH)
 
             self.game.draw()
             pygame.display.update()
