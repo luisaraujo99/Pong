@@ -4,7 +4,7 @@ WHITE = (255, 255, 255)
 
 
 class Paddle:
-    VEL = 4
+    VEL = 50
     HORIZ_PAD_WIDTH = 100
     HORIZ_PAD_HEIGHT = 20
     VERT_PAD_WIDTH = 20

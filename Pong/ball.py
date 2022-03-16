@@ -7,9 +7,9 @@ ANGLES = [math.radians(alpha) for alpha in range(50, 125, 1) if alpha != 0]
 
 
 class Ball:
-    MIN_VEL = 3
-    MAX_VEL = 6
-    INIT_VEL = 4
+    MIN_VEL = 30
+    MAX_VEL = 60
+    INIT_VEL = 40
     COLOR = WHITE
     RADIUS = 7
 

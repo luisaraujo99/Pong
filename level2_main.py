@@ -15,7 +15,7 @@ class PongGame:
         clock = pygame.time.Clock()
         run = True
         while run:
-            clock.tick(60)
+            clock.tick(5)
             game_info = self.game.loop()
             
 

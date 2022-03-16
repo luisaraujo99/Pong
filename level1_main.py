@@ -14,7 +14,7 @@ class PongGame:
         clock = pygame.time.Clock()
         run = True
         while run:
-            clock.tick(60)
+            clock.tick(5)
             game_info = self.game.loop()
 
             for event in pygame.event.get():
@@ -24,9 +24,9 @@ class PongGame:
 
             keys = pygame.key.get_pressed()
             if keys[pygame.K_RIGHT]:
-                self.game.paddle.move(False,True,window_width=WIDTH)
+                self.game.paddle.move(False, True, window_width=WIDTH)
             elif keys[pygame.K_LEFT]:
-                self.game.paddle.move(False,False,window_width=WIDTH)
+                self.game.paddle.move(False, False, window_width=WIDTH)
 
             self.game.draw()
             pygame.display.update()
