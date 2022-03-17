@@ -3,24 +3,22 @@ import math
 import random
 
 WHITE = (255, 255, 255)
-ANGLES = [math.radians(alpha) for alpha in range(50, 125, 1) if alpha != 0]
 
 
 class Ball:
     MIN_VEL = 30
-    MAX_VEL = 60
+    MAX_VEL = 4
     INIT_VEL = 40
     COLOR = WHITE
-    RADIUS = 7
+    RADIUS = 8
 
-    def __init__(self, x, y):
+    def __init__(self, x, y, width_scale, height_scale):
         self.x = self.original_x = x
         self.y = self.original_y = y
 
-        random_angle = random.choice(ANGLES)
-
-        self.x_vel = math.cos(random_angle) * self.INIT_VEL
-        self.y_vel = math.sin(random_angle) * self.INIT_VEL
+        random_dir = random.choice([1, -1])
+        self.x_vel = self.original_x_vel = width_scale*random_dir
+        self.y_vel = self.original_y_vel = height_scale*2
 
     def draw(self, win):
         pygame.draw.circle(win, self.COLOR, (self.x, self.y), self.RADIUS)
@@ -33,7 +31,7 @@ class Ball:
         self.x = self.original_x
         self.y = self.original_y
 
-        random_angle = random.choice(ANGLES)
+        random_dir = random.choice([1, -1])
 
-        self.x_vel = math.cos(random_angle) * self.INIT_VEL
-        self.y_vel = math.sin(random_angle) * self.INIT_VEL
+        self.x_vel = self.original_x_vel*random_dir
+        self.y_vel = self.original_y_vel

@@ -12,19 +12,21 @@ class SinglePadPong:
     pygame.init()
 
     WHITE = (255, 255, 255)
-    CYAN = (0,255,255)
+    GREY = (128, 128, 128)
+    CYAN = (0, 255, 255)
     BLACK = (0, 0, 0)
     SCORE_FONT = pygame.font.SysFont("comicsans", 50)
-    HORIZ_PAD_WIDTH = 100
-    HORIZ_PAD_HEIGHT = 20
 
-    def __init__(self, window, window_width, window_height):
+    def __init__(self, window, window_width, window_height, width_scale, height_scale):
         self.window_width = window_width
         self.window_height = window_height
+        self.width_scale = width_scale
+        self.height_scale = height_scale
 
-        self.paddle = Paddle(self.window_width//2 -
-                             self.HORIZ_PAD_WIDTH//2, self.window_height-30, self.HORIZ_PAD_WIDTH, self.HORIZ_PAD_HEIGHT, False)
-        self.ball = Ball(self.window_width // 2, self.window_height // 5)
+        self.paddle = Paddle(width_scale*11, self.window_height -
+                             2*height_scale, width_scale*6, height_scale, False, width_scale)
+        self.ball = Ball(width_scale*20, height_scale*12,
+                         self.width_scale, self.height_scale)
 
         self.score = 0
         self.window = window
@@ -35,19 +37,19 @@ class SinglePadPong:
 
     def handle_collision(self):
         # upper wall
-        if self.ball.y - self.ball.RADIUS <= 4:
+        if self.ball.y <= 0:
             self.ball.y_vel *= -1
             return 0
         # right wall
-        elif self.ball.x + self.ball.RADIUS >= self.window_width-4:
+        if self.ball.x >= self.window_width:
             self.ball.x_vel *= -1
             return 0
         # left wall
-        elif self.ball.x - self.ball.RADIUS <= 4:
+        if self.ball.x <= 0:
             self.ball.x_vel *= -1
             return 0
         # didn't catch
-        elif self.ball.y > self.window_height:
+        if self.ball.y > self.window_height:
             self.ball.reset()
             if self.score > 0:
                 return -1
@@ -56,28 +58,53 @@ class SinglePadPong:
 
         # check if the ball hits the paddle
         if self.ball.y_vel > 0:
-            if self.ball.x >= self.paddle.x and self.ball.x <= self.paddle.x + self.HORIZ_PAD_WIDTH:
-                if self.ball.y+self.ball.RADIUS >= self.paddle.y:
-                    self.ball.y_vel *= -1
-                    middle_x = self.paddle.x + self.HORIZ_PAD_WIDTH/2
-                    diff_ball_pad_center = middle_x - self.ball.x
-                    reduction_factor = (
-                        self.HORIZ_PAD_WIDTH / 2)/self.ball.MAX_VEL
-                    x_vel = diff_ball_pad_center / reduction_factor
-                    if abs(x_vel) < self.ball.MIN_VEL:
-                        x_vel = -self.ball.MIN_VEL if x_vel < 0 else self.ball.MIN_VEL
-                    self.ball.x_vel = -x_vel
-                    return 1
+            if self.ball.x >= self.paddle.x and self.ball.x <= self.paddle.x + self.paddle.width and self.ball.y >= self.paddle.y:
+                self.ball.y_vel *= -1
+                ball_distance_paddle_x = (abs(
+                    self.ball.x - self.paddle.x) // self.width_scale)
+
+                if(ball_distance_paddle_x == 0 or ball_distance_paddle_x == 6):
+                    x_vel = self.ball.x_vel*3
+                elif ball_distance_paddle_x == 1 or ball_distance_paddle_x == 5:
+                    x_vel = self.ball.x_vel*2
+                elif ball_distance_paddle_x == 2 or ball_distance_paddle_x == 4:
+                    x_vel = self.ball.x_vel*2
+                else:
+                    x_vel = self.ball.x_vel
+
+                if abs(x_vel) / self.width_scale > self.ball.MAX_VEL:
+                    x_vel = - self.ball.MAX_VEL * \
+                        self.width_scale if x_vel < 0 else self.ball.MAX_VEL * self.width_scale
+                self.ball.x_vel = -x_vel
+                return 1
         return 0
+
+    def drawGrid(self):
+        for x in range(0, self.window_width, self.width_scale):
+            pygame.draw.rect(self.window, self.GREY,
+                             (x, 0, 1, self.window_height))
+        for y in range(0, self.window_width, self.height_scale):
+            pygame.draw.rect(self.window, self.GREY,
+                             (0, y, self.window_width, 1))
+
+    def drawBallFlowGrid(self):
+        for x in range(0, self.window_width, self.width_scale):
+            pygame.draw.rect(self.window, self.GREY,
+                             (x, 0, 1, self.window_height))
+        for y in range(0, self.window_width, self.height_scale):
+            pygame.draw.rect(self.window, self.GREY,
+                             (0, y, self.window_width, 1))
 
     def draw(self):
         self.window.fill(self.BLACK)
-        pygame.draw.rect(self.window,self.CYAN,(0,0,5,self.window_height))
-        pygame.draw.rect(self.window,self.CYAN,(self.window_width-5,0,5,self.window_height))
-        pygame.draw.rect(self.window,self.CYAN,(0,0,self.window_width,5))
         self.draw_score()
         self.paddle.draw(self.window)
         self.ball.draw(self.window)
+        self.drawGrid()
+
+        if self.ball.x/self.width_scale != int(self.ball.x/self.width_scale) or self.ball.y/self.height_scale != int(self.ball.y/self.height_scale):
+            print("x: ", self.ball.x/self.width_scale)
+            print("y: ", self.ball.y/self.height_scale)
 
     def loop(self):
         self.ball.move()

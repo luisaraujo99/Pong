@@ -1,12 +1,14 @@
 from Pong import SinglePadPong
 import pygame
 
-WIDTH, HEIGHT = 800, 600
+WIDTH_SCALE, HEIGHT_SCALE = 30, 20
+WIDTH, HEIGHT = 40*WIDTH_SCALE, 40*HEIGHT_SCALE
 
 
 class PongGame:
     def __init__(self, window, width, height):
-        self.game = SinglePadPong(window, width, height)
+        self.game = SinglePadPong(
+            window, width, height, WIDTH_SCALE, HEIGHT_SCALE)
         self.ball = self.game.ball
         self.paddle = self.game.paddle
 
@@ -14,7 +16,7 @@ class PongGame:
         clock = pygame.time.Clock()
         run = True
         while run:
-            clock.tick(5)
+            clock.tick(10)
             game_info = self.game.loop()
 
             for event in pygame.event.get():
