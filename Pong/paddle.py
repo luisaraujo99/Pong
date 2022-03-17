@@ -27,11 +27,9 @@ class Paddle:
         if isFourPongPad:
             window_height = kwargs['window_height']
             if self.vertical == False:
-                LEFT_THRESHOLD = not positive and self.x - \
-                    Paddle.VEL < (self.VERT_PAD_WIDTH + 10)
+                LEFT_THRESHOLD = not positive and self.x - self.VEL < 2*self.VEL
                 RIGHT_THRESHOLD = positive and self.x + \
-                    self.width + Paddle.VEL > window_width - \
-                    (self.VERT_PAD_WIDTH + 10)
+                    self.width + self.VEL > window_width-2*self.VEL
 
                 if LEFT_THRESHOLD:
                     return False
@@ -44,15 +42,11 @@ class Paddle:
                     self.x -= self.VEL
 
             else:
-                UPPER_THRESHOLD = not positive and self.y - \
-                    self.VEL < self.VERT_PAD_WIDTH + 10
+                UPPER_THRESHOLD = not positive and self.y - self.VEL < 2*self.VEL
                 BOTTOM_THRESHOLD = positive and self.y + \
-                    self.VERT_PAD_HEIGHT + self.VEL > window_height - \
-                    (self.VERT_PAD_WIDTH + 10)
+                    self.height + self.VEL > window_height-2*self.VEL
 
-                if UPPER_THRESHOLD:
-                    return False
-                if BOTTOM_THRESHOLD:
+                if UPPER_THRESHOLD or BOTTOM_THRESHOLD:
                     return False
 
                 if positive:

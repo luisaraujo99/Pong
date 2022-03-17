@@ -11,7 +11,6 @@ class PongGame:
         self.game = DoublePadPong(
             window, width, height, WIDTH_SCALE, HEIGHT_SCALE)
         self.ball = self.game.ball
-        self.paddle = self.game.paddle_H1
 
     def test_ai(self):
         clock = pygame.time.Clock()

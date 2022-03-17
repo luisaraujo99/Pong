@@ -16,8 +16,6 @@ class DoublePadPong:
     GREY = (128, 128, 128)
     BLACK = (0, 0, 0)
     SCORE_FONT = pygame.font.SysFont("comicsans", 50)
-    HORIZ_PAD_WIDTH = 100
-    HORIZ_PAD_HEIGHT = 20
 
     def __init__(self, window, window_width, window_height, width_scale, height_scale):
         self.window_width = window_width
