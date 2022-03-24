@@ -26,7 +26,7 @@ class SinglePadPong:
         self.paddle = Paddle(width_scale*11, self.window_height -
                              2*height_scale, width_scale*6, height_scale, False, width_scale)
         self.ball = Ball(width_scale*20, height_scale*12,
-                         self.width_scale, self.height_scale)
+                         self.width_scale, self.height_scale,window_width,window_height)
 
         self.score = 0
         self.window = window
@@ -36,25 +36,11 @@ class SinglePadPong:
         self.window.blit(score_text, (15, 20))
 
     def handle_collision(self):
-        # upper wall
-        if self.ball.y <= 0:
-            self.ball.y_vel *= -1
-            return 0
-        # right wall
-        if self.ball.x >= self.window_width:
-            self.ball.x_vel *= -1
-            return 0
-        # left wall
-        if self.ball.x <= 0:
-            self.ball.x_vel *= -1
-            return 0
+       
         # didn't catch
-        if self.ball.y > self.window_height:
+        if self.ball.y >= self.window_height:
             self.ball.reset()
-            if self.score > 0:
-                return -1
-            else:
-                return 0
+            return -1
 
         # check if the ball hits the paddle
         if self.ball.y_vel > 0:
@@ -102,9 +88,6 @@ class SinglePadPong:
         self.ball.draw(self.window)
         self.drawGrid()
 
-        if self.ball.x/self.width_scale != int(self.ball.x/self.width_scale) or self.ball.y/self.height_scale != int(self.ball.y/self.height_scale):
-            print("x: ", self.ball.x/self.width_scale)
-            print("y: ", self.ball.y/self.height_scale)
 
     def loop(self):
         self.ball.move()
