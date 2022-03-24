@@ -7,11 +7,13 @@ import pickle
 
 class Q_AI:
 
-    def __init__(self, learning_rate, discount_rate, Ndim):
+    def __init__(self, learning_rate, discount_rate, Ndim,exploit_rate,epochs,episodes):
         self.q_matrix = np.zeros((Ndim+2, Ndim+2, Ndim+2, 3))
         self.learning_rate = learning_rate
         self.discount_rate = discount_rate
-        self.exploit_rate = 0.01
+        self.exploit_rate = exploit_rate
+        self.exploit_inc = episodes*epochs
+        
 
     def q(self, action, reward, state, new_state):
         arg_max_action = np.argmax(self.q_matrix[new_state])
@@ -29,7 +31,7 @@ class Q_AI:
             np.power(self.exploit_rate, self.q_matrix[state]))
 
         if self.exploit_rate < 1:
-            self.exploit_rate += 0.0001
+            self.exploit_rate += (1-self.exploit_rate)/self.exploit_inc
         else:
             self.exploit_rate =1
 

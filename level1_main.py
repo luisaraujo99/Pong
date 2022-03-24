@@ -1,6 +1,7 @@
 from Pong import SinglePadPong
 from Pong import Q_AI
 import pygame
+from alive_progress import alive_bar
 
 
 WIDTH_SCALE, HEIGHT_SCALE = 30, 20
@@ -17,67 +18,61 @@ class PongGame:
 
     def reward(self, initial_score, end_score):
         return end_score - initial_score
-    
-        
-    def Q_learning_algorithm(self, epochs=100, episodes=1000):
+
+    def Q_learning_algorithm(self, epochs=1000, episodes=2000):
         clock = pygame.time.Clock()
         run = True
-        q_ai = Q_AI(0.3, 0.97, GAME_DIM)
+        q_ai = Q_AI(0.1, 0.97, GAME_DIM, 0.01, epochs, episodes)
         q_ai.load_file()
-        
-        
+
         epoch = 0
         while epoch < epochs:
-            print("######## EPOCH: ",epoch," ########")
-            intial_nonzeros_ratio=q_ai.matrix_ratio()
-            print("Initial non-zeros ratio: ",intial_nonzeros_ratio)
-            episode=0
+            initial_nonzeros_ratio = q_ai.matrix_ratio()
+            episode = 0
             game_info = self.game.loop()
-            while episode < episodes and run:
+            with alive_bar(episodes, bar='blocks', title=f'Epoch {epoch}', spinner='arrows') as bar:
+                while episode < episodes and run:
 
-                clock.tick(120)
-                
-                init_score = game_info.score
+                    clock.tick(700)
 
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        run = False
-                        break
+                    init_score = game_info.score
 
-                state = ((self.ball.x//WIDTH_SCALE), (self.ball.y //
-                         HEIGHT_SCALE), (self.paddle.x//WIDTH_SCALE))
-                
-                action = q_ai.prob_action(state)
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            run = False
+                            break
 
-                if action == 2:
-                    self.game.paddle.move(False, True, window_width=WIDTH)
-                elif action == 1:
-                    self.game.paddle.move(False, False, window_width=WIDTH)
+                    state = ((self.ball.x//WIDTH_SCALE), (self.ball.y //
+                             HEIGHT_SCALE), (self.paddle.x//WIDTH_SCALE))
 
-                self.game.draw()
-                pygame.display.update()
-                
-                game_info = self.game.loop()
+                    action = q_ai.prob_action(state)
 
-                end_score = self.game.score
+                    if action == 2:
+                        self.game.paddle.move(False, True, window_width=WIDTH)
+                    elif action == 1:
+                        self.game.paddle.move(False, False, window_width=WIDTH)
 
-                r = self.reward(init_score, end_score)
-                
+                    self.game.draw()
+                    pygame.display.update()
 
-                new_state = ((self.ball.x//WIDTH_SCALE), (self.ball.y //
-                         HEIGHT_SCALE), (self.paddle.x//WIDTH_SCALE))
-                q_ai.q(action, r, state, new_state)
-                
-                episode += 1
+                    game_info = self.game.loop()
+
+                    end_score = self.game.score
+
+                    r = self.reward(init_score, end_score)
+
+                    new_state = ((self.ball.x//WIDTH_SCALE), (self.ball.y //
+                                                              HEIGHT_SCALE), (self.paddle.x//WIDTH_SCALE))
+                    q_ai.q(action, r, state, new_state)
+
+                    episode += 1
+                    bar.text(
+                        f'\n-> Non zero ratio: {initial_nonzeros_ratio}')
+                    bar()
 
             epoch += 1
-            q_ai.save_state()    
-            final_nonzeros_ratio=q_ai.matrix_ratio()
-            print("Epoch non-zeros ratio diference: ",final_nonzeros_ratio-intial_nonzeros_ratio)
-        
-        
-        
-        
+            q_ai.save_state()
+
         pygame.quit()
 
 
@@ -86,7 +81,6 @@ def main():
     pygame.display.set_caption("Pong")
     pong = PongGame(win, WIDTH, HEIGHT)
     pong.Q_learning_algorithm()
-    
 
 
 main()
