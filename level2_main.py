@@ -23,10 +23,9 @@ class PongGame:
                 if event.type == pygame.QUIT:
                     run = False
                     break
-            
+
             state = ((self.ball.x//WIDTH_SCALE), (self.ball.y //
                      HEIGHT_SCALE))
-            print("state: ", state)
 
             keys = pygame.key.get_pressed()
             if keys[pygame.K_RIGHT]:

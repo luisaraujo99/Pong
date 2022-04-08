@@ -23,10 +23,10 @@ class SinglePadPong:
         self.width_scale = width_scale
         self.height_scale = height_scale
 
-        self.paddle = Paddle(width_scale*11, self.window_height -
-                             2*height_scale, width_scale*6, height_scale, False, width_scale)
-        self.ball = Ball(width_scale*20, height_scale*12,
-                         self.width_scale, self.height_scale,window_width,window_height)
+        self.paddle = Paddle(width_scale*5, self.window_height -
+                             2*height_scale, width_scale*2, height_scale, False, width_scale)
+        self.ball = Ball(width_scale*5, height_scale*2,
+                         self.width_scale, self.height_scale, window_width, window_height)
 
         self.score = 0
         self.window = window
@@ -36,7 +36,7 @@ class SinglePadPong:
         self.window.blit(score_text, (15, 20))
 
     def handle_collision(self):
-       
+
         # didn't catch
         if self.ball.y >= self.window_height:
             self.ball.reset()
@@ -46,22 +46,23 @@ class SinglePadPong:
         if self.ball.y_vel > 0:
             if self.ball.x >= self.paddle.x and self.ball.x <= self.paddle.x + self.paddle.width and self.ball.y >= self.paddle.y:
                 self.ball.y_vel *= -1
-                ball_distance_paddle_x = (abs(
-                    self.ball.x - self.paddle.x) // self.width_scale)
 
-                if(ball_distance_paddle_x == 0 or ball_distance_paddle_x == 6):
-                    x_vel = self.ball.x_vel*3
-                elif ball_distance_paddle_x == 1 or ball_distance_paddle_x == 5:
-                    x_vel = self.ball.x_vel*2
-                elif ball_distance_paddle_x == 2 or ball_distance_paddle_x == 4:
-                    x_vel = self.ball.x_vel*2
-                else:
-                    x_vel = self.ball.x_vel
+                x_paddle_center = self.paddle.x + self.paddle.width//2
+
+                ball_distance_paddle_x = (
+                    self.ball.x - x_paddle_center)//self.width_scale
+
+                x_vel = self.ball.x_vel
+
+                if ball_distance_paddle_x < 0:
+                    x_vel = abs(x_vel)*-(int(ball_distance_paddle_x))
+                if ball_distance_paddle_x > 0:
+                    x_vel = abs(x_vel)*(int(ball_distance_paddle_x))
 
                 if abs(x_vel) / self.width_scale > self.ball.MAX_VEL:
                     x_vel = - self.ball.MAX_VEL * \
                         self.width_scale if x_vel < 0 else self.ball.MAX_VEL * self.width_scale
-                self.ball.x_vel = -x_vel
+
                 return 1
         return 0
 
@@ -87,7 +88,6 @@ class SinglePadPong:
         self.paddle.draw(self.window)
         self.ball.draw(self.window)
         self.drawGrid()
-
 
     def loop(self):
         self.ball.move()
