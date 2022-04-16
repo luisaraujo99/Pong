@@ -9,9 +9,7 @@ class Q_AI:
 
     def __init__(self, learning_rate, discount_rate, Ndim, exploit_rate, epochs, episodes, paddle_scale_len):
         self.q_matrix = np.zeros(
-            (Ndim+2, Ndim+2, Ndim-(paddle_scale_len-1), 3))
-        self.q_matrix_max = np.zeros(
-            (Ndim+2, Ndim+2, Ndim-(paddle_scale_len-1)))
+            (Ndim-(paddle_scale_len-1), Ndim, Ndim+1,  3))
         self.learning_rate = learning_rate
         self.discount_rate = discount_rate
         self.exploit_rate = exploit_rate
@@ -40,7 +38,7 @@ class Q_AI:
     def inc_exploit_rate(self):
         if self.exploit_rate < 1:
             #self.exploit_rate += (1-self.exploit_rate)/self.exploit_inc
-            self.exploit_rate = self.exploit_rate**(0.9)
+            self.exploit_rate = self.exploit_rate**(0.95)
         else:
             self.exploit_rate = 1
 
@@ -57,17 +55,19 @@ class Q_AI:
             file = open('last_state.txt', 'rb')
             last_saved_object = pickle.load(file)
             self.q_matrix = last_saved_object.q_matrix
-            self.learning_rate = last_saved_object.learning_rate
-            self.discount_rate = last_saved_object.discount_rate
+            #self.learning_rate = last_saved_object.learning_rate
+            #self.discount_rate = last_saved_object.discount_rate
             #self.exploit_rate = last_saved_object.exploit_rate
+            self.q_matrix_counter = last_saved_object.q_matrix_counter
             file.close()
         except IOError:
             print("Could not read file")
+            self.q_state_counter()
 
-    def q_matrix_to_max_by_state(self):
-        (x_ball, y_ball, x_paddle, _) = self.q_matrix.shape
-
-        for xb in range(x_ball):
-            for yb in range(y_ball):
-                for xp in range(x_paddle):
-                    self.q_matrix_max[xb, yb, xp] = self.v((xb, yb, xp))
+    def q_state_counter(self, state=None):
+        if state == None:
+            (x_paddle, y_ball, x_ball, _) = self.q_matrix.shape
+            self.q_matrix_counter = np.zeros(
+                (x_paddle, y_ball, x_ball), dtype=np.int64)
+        if state != None:
+            self.q_matrix_counter[state] += 1

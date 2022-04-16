@@ -66,7 +66,7 @@ class Ball:
     def reset(self):
 
         random_x_deviation = random.choice(
-            [5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5])
+            [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5])
 
         self.x = self.original_x+random_x_deviation*self.original_x_vel
         self.y = self.original_y

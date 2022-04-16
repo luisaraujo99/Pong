@@ -1,12 +1,17 @@
 
+from sklearn import preprocessing
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from matplotlib import colors
 import numpy as np
 from Pong import SinglePadPong
 from Pong import Q_AI
 import pygame
 from alive_progress import alive_bar
-from matplotlib.animation import FuncAnimation
 from itertools import count
+import matplotlib
+matplotlib.rc('xtick', labelsize=7)
+matplotlib.rc('ytick', labelsize=7)
 
 
 WIDTH_SCALE, HEIGHT_SCALE = 130, 70
@@ -25,21 +30,83 @@ class PongGame:
     def reward(self, initial_score, end_score):
         return end_score - initial_score
 
-    def plot(self, ax, episodes, values, episode, val):
+    def plot_v(self, x_vals, y_vals, plot_index, state, q_ai):
+        x_vals.append(next(plot_index))
+        y_vals.append(q_ai.v(state))
+        plt.cla()
+        plt.plot(x_vals, y_vals)
+        plt.pause(1e-10)
 
-        episodes.append(episode)
-        values.append(val)
-        ax.plot(episodes, values,
-                linewidth=2,
-                color='red')
-        return
+    def plot_color_action_matrix(self, q_matrix):
 
-    def Q_learning_algorithm(self, epochs=1000, episodes=500):
+        pad_dim, y_dim, x_dim, action = q_matrix.shape
+        max_matrix = np.zeros((pad_dim, y_dim, x_dim))
+
+        for pad in range(pad_dim):
+            for y in range(y_dim):
+                for x in range(x_dim):
+                    max_matrix[(pad, y, x)] = np.argmax(
+                        q_matrix[(pad, y, x)])
+
+        fig, axs = plt.subplots(3, 3, sharey=True)
+        cmap = colors.ListedColormap(['red', 'green', 'blue'])
+        for p_pos in range(pad_dim):
+            axes = axs[p_pos // 3, p_pos % 3]
+            axes.set_title('paddle x: {}'.format(p_pos), fontsize=10)
+            axes.matshow(
+                max_matrix[p_pos], origin='lower', cmap=cmap)
+            axes.grid(False)
+        axs[0, 0].invert_yaxis()
+        fig.tight_layout()
+        plt.show()
+
+    def plot_matrix_state_counter(self, matrix_counter):
+        pad_dim, y_dim, x_dim = matrix_counter.shape
+        fig, axs = plt.subplots(3, 3)
+        for p_pos in range(pad_dim):
+            axes = axs[p_pos // 3, p_pos % 3]
+            axes.set_title('paddle x: {}'.format(p_pos), fontsize=10)
+            axes.matshow(matrix_counter[p_pos], cmap=plt.cm.Blues)
+            for y in range(y_dim):
+                for x in range(x_dim):
+                    axes.text(
+                        x, y, str(matrix_counter[(p_pos, y, x)]), va='center', ha='center', fontsize=5)
+
+            axes.grid(False)
+        fig.tight_layout()
+        plt.show()
+
+    def plot_max_val_gradient(self, matrix):
+        pad_dim, y_dim, x_dim, action = matrix.shape
+        max_matrix = np.zeros((pad_dim, y_dim, x_dim))
+
+        for pad in range(pad_dim):
+            for y in range(y_dim):
+                for x in range(x_dim):
+                    max_matrix[(pad, y, x)] = np.max(
+                        matrix[(pad, y, x)])
+
+        fig, axs = plt.subplots(3, 3)
+        for p_pos in range(pad_dim):
+            axes = axs[p_pos // 3, p_pos % 3]
+            axes.set_title('paddle x: {}'.format(p_pos), fontsize=10)
+            axes.matshow(
+                preprocessing.MinMaxScaler().fit_transform(max_matrix[p_pos]), cmap=plt.cm.Blues)
+            for y in range(y_dim):
+                for x in range(x_dim):
+                    axes.text(
+                        x, y, str(round(np.max(matrix[(p_pos, y, x)]), 1)), va='center', ha='center', fontsize=5)
+
+            axes.grid(False)
+        fig.tight_layout()
+        plt.show()
+
+    def Q_learning_algorithm(self, epochs=1, episodes=100, show_v_plot=True):
         clock = pygame.time.Clock()
         run = True
-        q_ai = Q_AI(0.02, 0.97, GAME_DIM, 0.6, epochs, episodes, PAD_SIZE)
+        q_ai = Q_AI(learning_rate=0.8, discount_rate=0.97, Ndim=GAME_DIM, exploit_rate=0.01,
+                    epochs=epochs, episodes=episodes, paddle_scale_len=PAD_SIZE)
         q_ai.load_file()
-        q_ai.q_matrix_to_max_by_state()
 
         epoch = 0
 
@@ -66,13 +133,15 @@ class PongGame:
                             run = False
                             break
 
-                    state = ((self.ball.x//WIDTH_SCALE), (self.ball.y //
-                             HEIGHT_SCALE), (self.paddle.x//WIDTH_SCALE))
+                    state = ((self.paddle.x//WIDTH_SCALE), (self.ball.y //
+                             HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
 
                     action = q_ai.prob_action(state)
 
+                    # direita
                     if action == 2:
                         self.game.paddle.move(False, True, window_width=WIDTH)
+                    # esquerda
                     elif action == 1:
                         self.game.paddle.move(False, False, window_width=WIDTH)
 
@@ -85,15 +154,14 @@ class PongGame:
 
                     r = self.reward(init_score, end_score)
 
-                    new_state = ((self.ball.x//WIDTH_SCALE), (self.ball.y //
-                                                              HEIGHT_SCALE), (self.paddle.x//WIDTH_SCALE))
+                    new_state = ((self.paddle.x//WIDTH_SCALE), (self.ball.y //
+                                                                HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
                     q_ai.q(action, r, state, new_state)
 
-                    x_vals.append(next(plot_index))
-                    y_vals.append(q_ai.v(state))
-                    plt.cla()
-                    plt.plot(x_vals, y_vals)
-                    plt.pause(0.1)
+                    # plots
+                    if show_v_plot:
+                        self.plot_v(x_vals, y_vals, plot_index, state, q_ai)
+                    q_ai.q_state_counter(state=state)
 
                     episode += 1
                     bar.text(
@@ -102,8 +170,13 @@ class PongGame:
 
             epoch += 1
             q_ai.inc_exploit_rate()
+            print("exploitation rate: "+str(q_ai.exploit_rate))
             q_ai.save_state()
 
+        if show_v_plot:
+            self.plot_color_action_matrix(q_ai.q_matrix)
+            self.plot_matrix_state_counter(q_ai.q_matrix_counter)
+            self.plot_max_val_gradient(q_ai.q_matrix)
         pygame.quit()
 
 
