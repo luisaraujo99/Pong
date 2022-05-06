@@ -14,7 +14,7 @@ matplotlib.rc('xtick', labelsize=7)
 matplotlib.rc('ytick', labelsize=7)
 
 
-WIDTH_SCALE, HEIGHT_SCALE = 130, 70
+WIDTH_SCALE, HEIGHT_SCALE = 120, 80
 GAME_DIM = 10
 PAD_SIZE = 2
 WIDTH, HEIGHT = GAME_DIM*WIDTH_SCALE, GAME_DIM*HEIGHT_SCALE
@@ -23,19 +23,44 @@ WIDTH, HEIGHT = GAME_DIM*WIDTH_SCALE, GAME_DIM*HEIGHT_SCALE
 class PongGame:
     def __init__(self, window, width, height):
         self.game = SinglePadPong(
-            window, width, height, WIDTH_SCALE, HEIGHT_SCALE)
+            window, width, height, WIDTH_SCALE, HEIGHT_SCALE, PAD_SIZE, GAME_DIM)
         self.ball = self.game.ball
         self.paddle = self.game.paddle
 
     def reward(self, initial_score, end_score):
         return end_score - initial_score
 
-    def plot_v(self, x_vals, y_vals, plot_index, state, q_ai):
-        x_vals.append(next(plot_index))
-        y_vals.append(q_ai.v(state))
-        plt.cla()
-        plt.plot(x_vals, y_vals)
-        plt.pause(1e-10)
+    def plot_v(self, matrix_range, epochs, vmax, vmin, vmid, softmax, rewards, exploration_rates, states_visited_ratio, learning_rate_evol):
+
+        xvals = [i for i in range(epochs)]
+        x2vals = [i for i in range(matrix_range)]
+        xvals3 = [i for i in range(len(rewards))]
+        fig, axs = plt.subplots(4)
+        axs[0].set_title("Matrix values Mean per epoch",
+                         fontdict={'fontsize': 10})
+        axs[0].plot(xvals, vmax, color='r', linewidth=1)
+        axs[0].plot(xvals, vmin, color='g', linewidth=1)
+        axs[0].plot(xvals, vmid, color='b', linewidth=1)
+        axs[0].legend(['vmax', "vmin", "vmid"])
+        axs[1].set_title(
+            "Softmax of Matrix values after training", fontdict={'fontsize': 10})
+        axs[1].plot(x2vals, [Max for (Max, Min) in softmax],
+                    color='r', linewidth=1)
+        axs[1].plot(x2vals, [Min for (Max, Min) in softmax],
+                    color='b', linewidth=1)
+        axs[1].legend(["max", "min"])
+        axs[2].set_title(
+            "Rewards ratio per epoch and exploration rate", fontdict={'fontsize': 10})
+        axs[2].plot(xvals, exploration_rates, linewidth=1)
+        axs[2].plot(xvals, states_visited_ratio, linewidth=1)
+        axs[2].plot(xvals, learning_rate_evol, linewidth=1)
+        axs[2].legend(["explor. rate",
+                      "stat. visited", "learning rate"], fontsize=8)
+        axs[3].set_title(
+            "Total rewards in last 20 episodes", fontdict={'fontsize': 10})
+        axs[3].plot(xvals3, rewards, linewidth=1)
+
+        plt.show()
 
     def plot_color_action_matrix(self, q_matrix):
 
@@ -48,7 +73,8 @@ class PongGame:
                     max_matrix[(pad, y, x)] = np.argmax(
                         q_matrix[(pad, y, x)])
 
-        fig, axs = plt.subplots(3, 3, sharey=True)
+        fig, axs = plt.subplots(3, 3, sharey=True, figsize=(10, 10))
+        fig.suptitle('Action per state', fontsize=13)
         cmap = colors.ListedColormap(['red', 'green', 'blue'])
         for p_pos in range(pad_dim):
             axes = axs[p_pos // 3, p_pos % 3]
@@ -62,7 +88,8 @@ class PongGame:
 
     def plot_matrix_state_counter(self, matrix_counter):
         pad_dim, y_dim, x_dim = matrix_counter.shape
-        fig, axs = plt.subplots(3, 3)
+        fig, axs = plt.subplots(3, 3, figsize=(10, 10))
+        fig.suptitle('State visits counter', fontsize=13)
         for p_pos in range(pad_dim):
             axes = axs[p_pos // 3, p_pos % 3]
             axes.set_title('paddle x: {}'.format(p_pos), fontsize=10)
@@ -86,7 +113,8 @@ class PongGame:
                     max_matrix[(pad, y, x)] = np.max(
                         matrix[(pad, y, x)])
 
-        fig, axs = plt.subplots(3, 3)
+        fig, axs = plt.subplots(3, 3, figsize=(10, 10))
+        fig.suptitle('Max value per state', fontsize=13)
         for p_pos in range(pad_dim):
             axes = axs[p_pos // 3, p_pos % 3]
             axes.set_title('paddle x: {}'.format(p_pos), fontsize=10)
@@ -95,58 +123,79 @@ class PongGame:
             for y in range(y_dim):
                 for x in range(x_dim):
                     axes.text(
-                        x, y, str(round(np.max(matrix[(p_pos, y, x)]), 1)), va='center', ha='center', fontsize=5)
+                        x, y, str(round(np.max(matrix[(p_pos, y, x)]), 1)), va='center', ha='center', fontsize=7)
 
             axes.grid(False)
         fig.tight_layout()
         plt.show()
 
-    def Q_learning_algorithm(self, epochs=1, episodes=100, show_v_plot=True):
+    def enqueue(self, rewards_queue, r):
+        if len(rewards_queue) == 5:
+            rewards_queue.pop(0)
+        rewards_queue.append(0 if r == -1 else 1)
+
+    def Q_learning_algorithm(self, epochs=10, episodes=100, show_v_plot=True, render=True):
         clock = pygame.time.Clock()
         run = True
-        q_ai = Q_AI(learning_rate=0.8, discount_rate=0.97, Ndim=GAME_DIM, exploit_rate=0.01,
-                    epochs=epochs, episodes=episodes, paddle_scale_len=PAD_SIZE)
+        q_ai = Q_AI(learning_rate=1, discount_rate=0.97, Ndim=GAME_DIM, exploration_rate=1,
+                    learning_decay=1/800, paddle_scale_len=PAD_SIZE)
         q_ai.load_file()
 
         epoch = 0
 
         # plots
         plt.style.use('fivethirtyeight')
-        plot_index = count()
-        x_vals = []
-        y_vals = []
+
+        v_max_mean = []
+        v_mid_mean = []
+        v_min_mean = []
+        exploration_rates = []
+        states_visited_ratio = []
+        learning_rate_evol = []
+        rewards_in_a_row = 0
+        time = 0
+        rewards = []
+        rewards_queue = []
 
         while epoch < epochs:
-            initial_nonzeros_ratio = q_ai.matrix_ratio()
+
             episode = 0
             game_info = self.game.loop()
+
+            v_max = []
+            v_mid = []
+            v_min = []
 
             with alive_bar(episodes, bar='blocks', title=f'Epoch {epoch}', spinner='arrows') as bar:
                 while episode < episodes and run:
 
-                    clock.tick()
+                    if render:
+                        clock.tick(20)
+                        for event in pygame.event.get():
+                            if event.type == pygame.QUIT:
+                                run = False
+                                break
 
                     init_score = game_info.score
 
-                    for event in pygame.event.get():
-                        if event.type == pygame.QUIT:
-                            run = False
-                            break
-
                     state = ((self.paddle.x//WIDTH_SCALE), (self.ball.y //
-                             HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
+                                                            HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
 
-                    action = q_ai.prob_action(state)
+                    #action = q_ai.epsilon_greedy(state)
+                    action = q_ai.greedy(state)
 
-                    # direita
+                    # right
                     if action == 2:
-                        self.game.paddle.move(False, True, window_width=WIDTH)
-                    # esquerda
+                        self.game.paddle.move(
+                            False, True, window_width=WIDTH)
+                    # left
                     elif action == 1:
-                        self.game.paddle.move(False, False, window_width=WIDTH)
+                        self.game.paddle.move(
+                            False, False, window_width=WIDTH)
 
-                    self.game.draw()
-                    pygame.display.update()
+                    if render:
+                        self.game.draw()
+                        pygame.display.update()
 
                     game_info = self.game.loop()
 
@@ -154,35 +203,80 @@ class PongGame:
 
                     r = self.reward(init_score, end_score)
 
+                    if r == 1:
+                        rewards_in_a_row += 1
+                        if rewards_in_a_row == 7:
+                            self.game.ball.reset()
+                            rewards_in_a_row = 0
+
+                    if abs(r) == 1:
+                        self.enqueue(rewards_queue, r)
+                        rewards.append(np.mean(rewards_queue))
+
                     new_state = ((self.paddle.x//WIDTH_SCALE), (self.ball.y //
                                                                 HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
+
                     q_ai.q(action, r, state, new_state)
 
-                    # plots
-                    if show_v_plot:
-                        self.plot_v(x_vals, y_vals, plot_index, state, q_ai)
+                    #################### SAVE TRAINING DATA ####################
+                    v_max.append(q_ai.v(state))
+                    v_min.append(q_ai.v_min(state))
+                    v_mid.append(q_ai.v_mid(state))
                     q_ai.q_state_counter(state=state)
+                    ############################################################
 
+                    #######----- EXPLORATION RATE -----#######
+                    #q_ai.exploration_rate_decay(time, episodes*epochs)
+                    # q_ai.exploration_rate_decay2(
+                    #     (q_ai.q_matrix_counter < 7).sum()/q_ai.q_matrix_counter.size)
+
+                    # iteration
                     episode += 1
+                    time += 1
+
+                    # show training evolution
                     bar.text(
-                        f'\n-> Non zero ratio: {initial_nonzeros_ratio}')
+                        f'\n-> Exploration rate: {q_ai.exploration_rate}')
                     bar()
 
+            #################### SAVE TRAINING DATA ####################
+            exploration_rates.append(q_ai.exploration_rate)
+            v_max_mean.append(np.mean(v_max))
+            v_min_mean.append(np.mean(v_min))
+            v_mid_mean.append(np.mean(v_mid))
+            states_visited_ratio.append(
+                (q_ai.q_matrix_counter < 7).sum()/q_ai.q_matrix_counter.size)
+            learning_rate_evol.append(q_ai.learning_rate)
+            ############################################################
+
+            # learning rate evolution
+            q_ai.learning_rate_decay(epoch)
+
+            # iteration
             epoch += 1
-            q_ai.inc_exploit_rate()
-            print("exploitation rate: "+str(q_ai.exploit_rate))
+
+            # save Q state
             q_ai.save_state()
 
+        X, Y, Z, _ = q_ai.q_matrix.shape
+        softmax = [q_ai.softmax((x, y, z)) for x in range(X)
+                   for y in range(Y) for z in range(Z)]
+
         if show_v_plot:
-            self.plot_color_action_matrix(q_ai.q_matrix)
-            self.plot_matrix_state_counter(q_ai.q_matrix_counter)
-            self.plot_max_val_gradient(q_ai.q_matrix)
+            self.plot_v(X*Y*Z, epochs, v_max_mean,
+                        v_min_mean, v_mid_mean, softmax, rewards, exploration_rates, states_visited_ratio, learning_rate_evol)
+            if GAME_DIM == 10:
+                self.plot_color_action_matrix(q_ai.q_matrix)
+                self.plot_matrix_state_counter(q_ai.q_matrix_counter)
+                self.plot_max_val_gradient(q_ai.q_matrix)
+
+        # close pygame env
         pygame.quit()
 
 
 def main():
     win = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Pong")
+    pygame.display.set_caption("Single Pad Pong")
     pong = PongGame(win, WIDTH, HEIGHT)
     plt.show()
     pong.Q_learning_algorithm()

@@ -3,17 +3,21 @@
 
 import numpy as np
 import pickle
+import random
+import math
 
 
 class Q_AI:
 
-    def __init__(self, learning_rate, discount_rate, Ndim, exploit_rate, epochs, episodes, paddle_scale_len):
+    def __init__(self, learning_rate, discount_rate, Ndim, exploration_rate, learning_decay, paddle_scale_len):
         self.q_matrix = np.zeros(
             (Ndim-(paddle_scale_len-1), Ndim, Ndim+1,  3))
         self.learning_rate = learning_rate
         self.discount_rate = discount_rate
-        self.exploit_rate = exploit_rate
-        self.exploit_inc = episodes*epochs
+        self.exploration_rate = exploration_rate
+        self.learning_decay = learning_decay
+        self.q_matrix_counter = np.zeros(
+            (Ndim-(paddle_scale_len-1), Ndim, Ndim+1), dtype=np.int64)
 
     def q(self, action, reward, state, new_state):
         arg_max_action = np.argmax(self.q_matrix[new_state])
@@ -28,36 +32,61 @@ class Q_AI:
     def v(self, state):
         return np.max(self.q_matrix[state])
 
-    def prob_action(self, state):
+    def v_min(self, state):
+        return np.min(self.q_matrix[state])
 
-        prob_array = np.power(self.exploit_rate, self.q_matrix[state])/np.sum(
-            np.power(self.exploit_rate, self.q_matrix[state]))
+    def v_mid(self, state):
+        return np.sort(self.q_matrix[state])[-2]
 
-        return np.random.choice([0, 1, 2], p=prob_array)
+    def softmax(self, state):
+        res = np.exp(self.q_matrix[state])/sum(np.exp(self.q_matrix[state]))
+        return (np.max(res), np.min(res))
 
-    def inc_exploit_rate(self):
-        if self.exploit_rate < 1:
-            #self.exploit_rate += (1-self.exploit_rate)/self.exploit_inc
-            self.exploit_rate = self.exploit_rate**(0.95)
+    def greedy(self, state):
+
+        return np.argmax(self.q_matrix[state])
+
+    def epsilon_greedy(self, state):
+        r = random.random()
+        if r < self.exploration_rate:
+            return random.choice([0, 1, 2])
         else:
-            self.exploit_rate = 1
+            return np.argmax(self.q_matrix[state])
 
-    def save_state(self):
-        file = open('last_state.txt', 'wb')
+    # For values of A below 0.5, agent would be spending less time exploring and more time exploiting
+    # B decides the slope of transition region between Exploration to Exploitation zone
+    # C controls the steepness of left and right tail of the graph
+    def exploration_rate_decay(self, time, EPISODES, A=0.1, B=0.5, C=0.1):
+        standardized_time = (time-A*EPISODES)/(B*EPISODES)
+        cosh = np.cosh(math.exp(-standardized_time))
+        expr = 1.1-(1/cosh+(time*C/EPISODES))
+        if expr < 0:
+            self.exploration_rate = 0.001
+        else:
+            self.exploration_rate = expr
+
+    def exploration_rate_decay2(self, val):
+        self.exploration_rate = val
+
+    def learning_rate_decay(self, time):
+        self.learning_rate = math.exp(-self.learning_decay*time)
+
+    def save_state(self, filename='last_state.txt'):
+        file = open(filename, 'wb')
         pickle.dump(self, file)
         file.close()
 
     def matrix_ratio(self):
         return np.count_nonzero(self.q_matrix)/self.q_matrix.size
 
-    def load_file(self):
+    def load_file(self, filename="last_state.txt"):
         try:
-            file = open('last_state.txt', 'rb')
+            file = open(filename, 'rb')
             last_saved_object = pickle.load(file)
             self.q_matrix = last_saved_object.q_matrix
-            #self.learning_rate = last_saved_object.learning_rate
-            #self.discount_rate = last_saved_object.discount_rate
-            #self.exploit_rate = last_saved_object.exploit_rate
+            self.learning_rate = last_saved_object.learning_rate
+            # self.discount_rate = last_saved_object.discount_rate
+            # self.exploit_rate = last_saved_object.exploit_rate
             self.q_matrix_counter = last_saved_object.q_matrix_counter
             file.close()
         except IOError:
@@ -65,9 +94,5 @@ class Q_AI:
             self.q_state_counter()
 
     def q_state_counter(self, state=None):
-        if state == None:
-            (x_paddle, y_ball, x_ball, _) = self.q_matrix.shape
-            self.q_matrix_counter = np.zeros(
-                (x_paddle, y_ball, x_ball), dtype=np.int64)
         if state != None:
             self.q_matrix_counter[state] += 1
