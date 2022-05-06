@@ -12,25 +12,25 @@ class DoublePadPong:
     pygame.init()
 
     WHITE = (255, 255, 255)
-    CYAN = (0, 255, 255)
     GREY = (128, 128, 128)
+    CYAN = (0, 255, 255)
     BLACK = (0, 0, 0)
     SCORE_FONT = pygame.font.SysFont("comicsans", 50)
 
-    def __init__(self, window, window_width, window_height, width_scale, height_scale):
+    def __init__(self, window, window_width, window_height, width_scale, height_scale, PAD_SIZE, GAME_DIM):
         self.window_width = window_width
         self.window_height = window_height
         self.width_scale = width_scale
         self.height_scale = height_scale
 
-        self.paddle_H1 = Paddle(width_scale*11, self.window_height -
-                                2*height_scale, width_scale*6, height_scale, False, width_scale)
+        self.paddle1 = Paddle(width_scale*(GAME_DIM//2), height_scale,
+                              width_scale*PAD_SIZE, height_scale, False, width_scale)
 
-        self.paddle_H2 = Paddle(
-            width_scale*11, height_scale, width_scale*6, height_scale, False, width_scale)
+        self.paddle2 = Paddle(width_scale*(GAME_DIM//2), self.window_height -
+                              2*height_scale, width_scale*PAD_SIZE, height_scale, False, width_scale)
 
-        self.ball = Ball(width_scale*20, height_scale*20,
-                         self.width_scale, self.height_scale)
+        self.ball = Ball(width_scale*(GAME_DIM//2), height_scale*(GAME_DIM//2),
+                         self.width_scale, self.height_scale, window_width, window_height, GAME_DIM)
 
         self.score = 0
         self.window = window
@@ -39,75 +39,198 @@ class DoublePadPong:
         score_text = self.SCORE_FONT.render(f"{self.score}", 1, self.WHITE)
         self.window.blit(score_text, (15, 20))
 
+    def handle_ball_paddle_collision(self, ball_x, paddle_number):
+
+        if paddle_number == 1:
+            x_paddle_center = self.paddle1.x + self.paddle1.width//2
+        elif paddle_number == 2:
+            x_paddle_center = self.paddle2.x + self.paddle2.width//2
+
+        ball_distance_paddle_x = (
+            ball_x - x_paddle_center)//self.width_scale
+
+        x_vel = self.ball.x_vel
+        y_vel = self.ball.y_vel
+
+        if ball_distance_paddle_x < 0:
+            if x_vel == 0:
+                x_vel = self.ball.original_x_vel
+            x_vel = abs(x_vel)*(int(ball_distance_paddle_x))
+        if ball_distance_paddle_x > 0:
+            if x_vel == 0:
+                x_vel = self.ball.original_x_vel
+            x_vel = abs(x_vel)*(int(ball_distance_paddle_x))
+        if ball_distance_paddle_x == 0:
+            x_vel = 0
+            y_vel *= 2
+        if abs(x_vel) / self.width_scale > self.ball.MAX_VEL:
+            x_vel = - self.ball.MAX_VEL * \
+                self.width_scale if x_vel < 0 else self.ball.MAX_VEL * self.width_scale
+        if abs(y_vel) / self.width_scale > self.ball.MAX_VEL:
+            y_vel = - self.ball.MAX_VEL * \
+                self.height_scale if y_vel < 0 else self.ball.MAX_VEL * self.height_scale
+
+        self.ball.x_vel = x_vel
+        self.ball.y_vel = y_vel
+
     def handle_collision(self):
-        # upper wall
-        if self.ball.y - self.ball.RADIUS <= 0:
-            self.ball.reset()
-            return -1
-        # right wall
-        if self.ball.x + self.ball.RADIUS >= self.window_width-4:
-            self.ball.x_vel *= -1
-            return 0
-        # left wall
-        if self.ball.x - self.ball.RADIUS <= 4:
-            self.ball.x_vel *= -1
-            return 0
-        if self.ball.y > self.window_height:
-            self.ball.reset()
-            return -1
+        (ball_x, ball_y) = self.ball.move()
+        reward = 0
 
-        # check if the ball hits the paddle H1
-        if self.ball.y_vel > 0:
-            if self.ball.x >= self.paddle_H1.x and self.ball.x <= self.paddle_H1.x + self.paddle_H1.width and self.ball.y >= self.paddle_H1.y:
+        ####################################################################
+        ########################### TOP   PAD ##############################
+        ####################################################################
+
+        # TOP LEFT (PAD)
+        if ball_x < 0 and ball_y > self.paddle1.y and self.paddle1.x == 0:
+            lambda_x = (-self.ball.x)/self.ball.x_vel
+            lambda_y = (self.ball.y-(self.paddle1.y +
+                        self.paddle1.height))/self.ball.y_vel
+
+            if lambda_x <= lambda_y:
+                self.ball.x_vel *= -1
+                ball_x = (1-lambda_x)*self.ball.x_vel
+                ball_y = (self.ball.y+lambda_x*self.ball.y_vel) + \
+                    (1-lambda_x)*self.ball.y_vel
+            else:  # PADD COLLISION
                 self.ball.y_vel *= -1
-                ball_distance_paddle_x = (abs(
-                    self.ball.x - self.paddle_H1.x) // self.width_scale)
+                self.handle_ball_paddle_collision(ball_x, 1)
+                ball_x = ball_x+(1-lambda_y)*self.ball.x_vel
+                ball_y = self.paddle1.y + (1-lambda_y)*self.ball.y_vel
+                reward = 1
 
-                if(ball_distance_paddle_x == 0 or ball_distance_paddle_x == 6):
-                    x_vel = self.ball.x_vel*3
-                elif ball_distance_paddle_x == 1 or ball_distance_paddle_x == 5:
-                    x_vel = self.ball.x_vel*2
-                elif ball_distance_paddle_x == 2 or ball_distance_paddle_x == 4:
-                    x_vel = self.ball.x_vel*2
-                else:
-                    x_vel = self.ball.x_vel
+        # TOP RIGHT (PAD)
+        elif ball_x > self.window_width and ball_y < self.paddle1.y and self.paddle1.x + self.paddle1.width == self.window_width:
+            lambda_x = (self.window_width-self.ball.x)/self.ball.x_vel
+            lambda_y = (self.ball.y-(self.paddle1.y +
+                        self.paddle1.height))/self.ball.y_vel
 
-                if abs(x_vel) / self.width_scale > self.ball.MAX_VEL:
-                    x_vel = - self.ball.MAX_VEL * \
-                        self.width_scale if x_vel < 0 else self.ball.MAX_VEL * self.width_scale
-                self.ball.x_vel = -x_vel
-                return 1
-
-        # check if the ball hits the paddle H2
-        if self.ball.y_vel < 0:
-            if self.ball.x >= self.paddle_H2.x and self.ball.x <= self.paddle_H2.x + self.paddle_H2.width and self.ball.y <= self.paddle_H2.y + self.paddle_H2.height:
+            if lambda_x <= lambda_y:
+                self.ball.x_vel *= -1
+                ball_x = self.window_width + (1-lambda_x)*self.ball.x_vel
+                ball_y = (self.ball.y+lambda_x*self.ball.y_vel) + \
+                    (1-lambda_x)*self.ball.y_vel
+            else:  # PADD COLLISION
                 self.ball.y_vel *= -1
-                ball_distance_paddle_x = (abs(
-                    self.ball.x - self.paddle_H2.x) // self.width_scale)
+                self.handle_ball_paddle_collision(ball_x, 1)
+                ball_x = ball_x+(1-lambda_y)*self.ball.x_vel
+                ball_y = self.paddle1.y + (1-lambda_y)*self.ball.y_vel
+                reward = 1
 
-                if(ball_distance_paddle_x == 0 or ball_distance_paddle_x == 6):
-                    x_vel = self.ball.x_vel*3
-                elif ball_distance_paddle_x == 1 or ball_distance_paddle_x == 5:
-                    x_vel = self.ball.x_vel*2
-                elif ball_distance_paddle_x == 2 or ball_distance_paddle_x == 4:
-                    x_vel = self.ball.x_vel*2
-                else:
-                    x_vel = self.ball.x_vel
+        ####################################################################
+        ########################### BOTTOM  PAD ############################
+        ####################################################################
 
-                if abs(x_vel) / self.width_scale > self.ball.MAX_VEL:
-                    x_vel = - self.ball.MAX_VEL * \
-                        self.width_scale if x_vel < 0 else self.ball.MAX_VEL * self.width_scale
-                self.ball.x_vel = -x_vel
-                return 1
+        # BOTTOM LEFT (PAD)
+        if ball_x < 0 and ball_y > self.paddle2.y and self.paddle2.x == 0:
+            lambda_x = (-self.ball.x)/self.ball.x_vel
+            lambda_y = (self.paddle2.y - self.ball.y)/self.ball.y_vel
 
-        return 0
+            if lambda_x <= lambda_y:
+                self.ball.x_vel *= -1
+                ball_x = (1-lambda_x)*self.ball.x_vel
+                ball_y = (self.ball.y+lambda_x*self.ball.y_vel) + \
+                    (1-lambda_x)*self.ball.y_vel
+            else:  # PADD COLLISION
+                self.ball.y_vel *= -1
+                self.handle_ball_paddle_collision(ball_x, 2)
+                ball_x = ball_x+(1-lambda_y)*self.ball.x_vel
+                ball_y = self.paddle2.y + (1-lambda_y)*self.ball.y_vel
+                reward = 1
 
-    def draw_line(self):
-        for i in range(10, self.window_width-10, self.window_width//25):
-            if i % 2 == 1:
-                continue
-            pygame.draw.rect(
-                self.window, self.CYAN, (i, self.window_height//2, 10, 2))
+        # BOTTOM RIGHT (PAD)
+        elif ball_x > self.window_width and ball_y > self.paddle2.y and self.paddle2.x + self.paddle2.width == self.window_width:
+            lambda_x = (self.window_width-self.ball.x)/self.ball.x_vel
+            lambda_y = (self.paddle2.y - self.ball.y)/self.ball.y_vel
+
+            if lambda_x <= lambda_y:
+                self.ball.x_vel *= -1
+                ball_x = self.window_width + (1-lambda_x)*self.ball.x_vel
+                ball_y = (self.ball.y+lambda_x*self.ball.y_vel) + \
+                    (1-lambda_x)*self.ball.y_vel
+            else:  # PADD COLLISION
+                self.ball.y_vel *= -1
+                self.handle_ball_paddle_collision(ball_x, 2)
+                ball_x = ball_x+(1-lambda_y)*self.ball.x_vel
+                ball_y = self.paddle2.y + (1-lambda_y)*self.ball.y_vel
+                reward = 1
+
+        ##################################################################
+        ##################################################################
+        ##################################################################
+
+        # LEFT
+        if ball_x < 0:
+            lambda_x = (-self.ball.x)/self.ball.x_vel
+            self.ball.x_vel *= -1
+            ball_x = (1-lambda_x)*self.ball.x_vel
+            ball_y = (self.ball.y+lambda_x*self.ball.y_vel) + \
+                (1-lambda_x)*self.ball.y_vel
+
+        # RIGHT
+        if ball_x > self.window_width:
+            lambda_x = (self.window_width-self.ball.x)/self.ball.x_vel
+            self.ball.x_vel *= -1
+            ball_x = self.window_width + (1-lambda_x)*self.ball.x_vel
+            ball_y = (self.ball.y+lambda_x*self.ball.y_vel) + \
+                (1-lambda_x)*self.ball.y_vel
+
+        # BOTTOM PAD LINE
+        if ball_y > self.paddle2.y:
+
+            lambda_y = (self.paddle2.y - self.ball.y)/self.ball.y_vel
+            ball_x = self.ball.x+lambda_y*self.ball.x_vel
+            ball_y = self.paddle2.y
+            if ball_x >= self.paddle2.x and ball_x <= self.paddle2.x+self.paddle2.width:
+                self.ball.y_vel *= -1
+                self.handle_ball_paddle_collision(ball_x, 2)
+                ball_x = ball_x+(1-lambda_y)*self.ball.x_vel
+                ball_y = self.paddle2.y + (1-lambda_y)*self.ball.y_vel
+                reward = 1
+            else:
+                self.ball.reset()
+                return -1
+
+        # TOP PAD LINE
+        if ball_y < self.paddle1.y+self.paddle1.height:
+
+            lambda_y = (self.ball.y-(self.paddle1.y +
+                        self.paddle1.height))/self.ball.y_vel
+            ball_x = self.ball.x+lambda_y*self.ball.x_vel
+            ball_y = self.paddle1.y
+            if ball_x >= self.paddle1.x and ball_x <= self.paddle1.x+self.paddle1.width:
+                self.ball.y_vel *= -1
+                self.handle_ball_paddle_collision(ball_x, 1)
+                ball_x = ball_x+(1-lambda_y)*self.ball.x_vel
+                ball_y = self.paddle1.y + (1-lambda_y)*self.ball.y_vel
+                reward = 1
+            else:
+                self.ball.reset()
+                return -1
+
+        ball_x = int(ball_x)
+        ball_y = int(ball_y)
+
+        # NEW POSITION IS VALID
+        if (ball_x >= 0 and ball_x <= self.window_width) and (ball_y >= 0 and ball_y <= self.window_height):
+            self.ball.x = ball_x
+            self.ball.y = ball_y
+            return reward
+
+        # NEW POSITION IS OUT OF BOUNDs
+        else:
+            if ball_x < 0:
+                self.ball.x = 0
+                self.ball.y = ball_y
+                return reward
+            elif ball_x > self.window_width:
+                self.ball.x = self.window_width
+                self.ball.y = ball_y
+                return reward
+            elif ball_y < 0:
+                self.ball.x = ball_x
+                self.ball.y = 0
+                return reward
 
     def drawGrid(self):
         for x in range(0, self.window_width, self.width_scale):
@@ -127,15 +250,13 @@ class DoublePadPong:
 
     def draw(self):
         self.window.fill(self.BLACK)
-        self.draw_line()
         self.draw_score()
-        self.drawGrid()
-        self.paddle_H1.draw(self.window)
-        self.paddle_H2.draw(self.window)
+        self.paddle1.draw(self.window)
+        self.paddle2.draw(self.window)
         self.ball.draw(self.window)
+        self.drawGrid()
 
     def loop(self):
-        self.ball.move()
         self.score += self.handle_collision()
 
         game_info = GameInformation(self.score)
@@ -145,5 +266,5 @@ class DoublePadPong:
     def reset(self):
         """Resets the entire game."""
         self.ball.reset()
-        self.paddle_H1.reset()
+        self.paddle.reset()
         self.score = 0
