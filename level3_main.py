@@ -8,14 +8,15 @@ import pygame
 from alive_progress import alive_bar
 from itertools import count
 import matplotlib
+import operator
 
 matplotlib.rc('xtick', labelsize=7)
 matplotlib.rc('ytick', labelsize=7)
 
 
-WIDTH_SCALE, HEIGHT_SCALE = 16, 14
-GAME_DIM_X, GAME_DIM_Y = 60, 60
-PAD_SIZE = 10
+WIDTH_SCALE, HEIGHT_SCALE = 13, 12
+GAME_DIM_X, GAME_DIM_Y = 70, 70
+PAD_SIZE = 14
 WIDTH, HEIGHT = GAME_DIM_X*WIDTH_SCALE, GAME_DIM_Y*HEIGHT_SCALE
 X_PAD_DIM = GAME_DIM_X-(PAD_SIZE-1)
 
@@ -31,7 +32,8 @@ class PongGame:
         self.paddle4 = self.game.paddle4
 
     def reward(self, initial_score, end_score):
-        return end_score - initial_score
+        return tuple(
+            map(operator.sub, end_score, initial_score))
 
     def plot_v(self, matrix_range, epochs, vmax, vmin, vmid, softmax, rewards, exploration_rates, states_visited_ratio, learning_rate_evol):
 
@@ -87,6 +89,20 @@ class PongGame:
         if len(rewards_queue) == 5:
             rewards_queue.pop(0)
         rewards_queue.append(0 if r == -1 else 1)
+
+    def return_states(self):
+        state_p1 = ((self.paddle1.x//WIDTH_SCALE), (self.ball.y //
+                                                    HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
+
+        state_p2 = ((self.paddle2.x//WIDTH_SCALE), (self.ball.y //
+                                                    HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
+
+        state_p3 = ((self.paddle3.y//WIDTH_SCALE), (self.ball.y //
+                                                    HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
+
+        state_p4 = ((self.paddle4.y//WIDTH_SCALE), (self.ball.y //
+                                                    HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
+        return (state_p1, state_p2, state_p3, state_p4)
 
     def Q_learning_algorithm(self, epochs=5000, episodes=1000, show_v_plot=True, render=True):
         clock = pygame.time.Clock()
@@ -148,7 +164,7 @@ class PongGame:
                 while episode < episodes and run:
 
                     if render:
-                        clock.tick(25)
+                        clock.tick(20)
                         for event in pygame.event.get():
                             if event.type == pygame.QUIT:
                                 run = False
@@ -156,17 +172,7 @@ class PongGame:
 
                     init_score = game_info.score
 
-                    state_p1 = ((self.paddle1.x//WIDTH_SCALE), (self.ball.y //
-                                                                HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
-
-                    state_p2 = ((self.paddle2.x//WIDTH_SCALE), (self.ball.y //
-                                                                HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
-
-                    state_p3 = ((self.paddle3.y//WIDTH_SCALE), (self.ball.y //
-                                                                HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
-
-                    state_p4 = ((self.paddle4.y//WIDTH_SCALE), (self.ball.y //
-                                                                HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
+                    state_p1, state_p2, state_p3, state_p4 = self.return_states()
 
                     action_p1 = q_ai_1.epsilon_greedy(state_p1)
                     action_p2 = q_ai_2.epsilon_greedy(state_p2)
@@ -222,41 +228,61 @@ class PongGame:
 
                     game_info = self.game.loop()
 
+                    ############################################################
+                    ######################## REWARD HANDLING ###################
                     end_score = self.game.score
 
-                    r = self.reward(init_score, end_score)
+                    r1, r2, r3, r4 = self.reward(init_score, end_score)
 
-                    if r == 1:
+                    # pad 1
+                    if r1 >= 1:
                         rewards_in_a_row1 += 1
-                        rewards_in_a_row2 += 1
-                        if rewards_in_a_row1 == 15 or rewards_in_a_row2 == 15:
+                        if rewards_in_a_row1 == 15:
                             self.game.ball.reset()
                             rewards_in_a_row1 = 0
+
+                    if abs(r1) == 1:
+                        self.enqueue(rewards_queue1, r1)
+                        rewards1.append(np.mean(rewards_queue1))
+                    # pad 2
+                    if r2 >= 1:
+                        rewards_in_a_row2 += 1
+                        if rewards_in_a_row2 == 15:
+                            self.game.ball.reset()
                             rewards_in_a_row2 = 0
 
-                    if abs(r) == 1:
-                        self.enqueue(rewards_queue1, r)
-                        self.enqueue(rewards_queue2, r)
-                        rewards1.append(np.mean(rewards_queue1))
-                        rewards2.append(np.mean(rewards_queue2))
+                    if abs(r2) == 1:
+                        self.enqueue(rewards_queue2, r2)
+                        rewards3.append(np.mean(rewards_queue2))
+                    # pad 3
+                    if r3 >= 1:
+                        rewards_in_a_row3 += 1
+                        if rewards_in_a_row3 == 15:
+                            self.game.ball.reset()
+                            rewards_in_a_row3 = 0
 
-                    new_state_p1 = ((self.paddle1.x//WIDTH_SCALE), (self.ball.y //
-                                                                    HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
+                    if abs(r3) == 1:
+                        self.enqueue(rewards_queue3, r3)
+                        rewards3.append(np.mean(rewards_queue3))
+                    # pad 4
+                    if r4 >= 1:
+                        rewards_in_a_row4 += 1
+                        if rewards_in_a_row4 == 15:
+                            self.game.ball.reset()
+                            rewards_in_a_row4 = 0
 
-                    new_state_p2 = ((self.paddle1.x//WIDTH_SCALE), (self.ball.y //
-                                                                    HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
+                    if abs(r4) == 1:
+                        self.enqueue(rewards_queue4, r4)
+                        rewards4.append(np.mean(rewards_queue4))
 
-                    new_state_p3 = ((self.paddle3.y//WIDTH_SCALE), (self.ball.y //
-                                                                    HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
+                    new_state_p1, new_state_p2, new_state_p3, new_state_p4 = self.return_states()
 
-                    new_state_p4 = ((self.paddle4.y//WIDTH_SCALE), (self.ball.y //
-                                                                    HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
+                    q_ai_1.q(action_p1, r1, state_p1, new_state_p1)
+                    q_ai_2.q(action_p2, r2, state_p2, new_state_p2)
+                    q_ai_3.q(action_p3, r3, state_p3, new_state_p3)
+                    q_ai_4.q(action_p4, r4, state_p4, new_state_p4)
 
-                    q_ai_1.q(action_p1, r, state_p1, new_state_p1)
-                    q_ai_2.q(action_p2, r, state_p2, new_state_p2)
-                    q_ai_3.q(action_p3, r, state_p3, new_state_p3)
-                    q_ai_4.q(action_p4, r, state_p4, new_state_p4)
-
+                    ############################################################
                     #################### SAVE TRAINING DATA ####################
                     # pad1
                     v_max1.append(q_ai_1.v(state_p1))
@@ -268,11 +294,21 @@ class PongGame:
                     v_min2.append(q_ai_2.v_min(state_p2))
                     v_mid2.append(q_ai_2.v_mid(state_p2))
                     q_ai_2.q_state_counter(state=state_p2)
+                    # pad3
+                    v_max3.append(q_ai_3.v(state_p3))
+                    v_min3.append(q_ai_3.v_min(state_p3))
+                    v_mid3.append(q_ai_3.v_mid(state_p3))
+                    q_ai_3.q_state_counter(state=state_p3)
+                    # pad4
+                    v_max4.append(q_ai_4.v(state_p4))
+                    v_min4.append(q_ai_4.v_min(state_p4))
+                    v_mid4.append(q_ai_4.v_mid(state_p4))
+                    q_ai_4.q_state_counter(state=state_p4)
                     # ############################################################
 
                     #######----- EXPLORATION RATE -----#######
-                    #q_ai_1.exploration_rate_decay(time, episodes*epochs)
-                    #q_ai_2.exploration_rate_decay(time, episodes*epochs)
+                    # q_ai_1.exploration_rate_decay(time, episodes*epochs)
+                    # q_ai_2.exploration_rate_decay(time, episodes*epochs)
                     q_ai_1.exploration_rate_decay2(
                         ((q_ai_1.q_matrix_counter[0:, 1:GAME_DIM_Y-1, 0:]) < 4).sum()/(q_ai_1.q_matrix_counter[0:, 1:GAME_DIM_Y-1, 0:]).size)
 

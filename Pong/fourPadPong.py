@@ -2,11 +2,13 @@ from matplotlib.ft2font import HORIZONTAL
 from .paddle import Paddle
 from .ball import Ball
 import pygame
+import operator
 
 
 COOPERATION = 1
-ALL_VS_ALL = 2
-PERSONALITY_COOPERATION = 3
+TEAM_COOPERATION = 2
+ALL_VS_ALL = 3
+PERSONALITY_COOPERATION = 4
 
 
 class GameInformation:
@@ -18,10 +20,10 @@ class FourPadPong:
     pygame.init()
 
     WHITE = (255, 255, 255)
-    GREY = (128, 128, 128)
+    GREY = (211, 211, 211)
     CYAN = (0, 255, 255)
     BLACK = (0, 0, 0)
-    SCORE_FONT = pygame.font.SysFont("comicsans", 50)
+    SCORE_FONT = pygame.font.SysFont("comicsans", 45)
 
     def __init__(self, window, window_width, window_height, width_scale, height_scale, PAD_SIZE, GAME_DIM_X, GAME_DIM_Y):
         self.window_width = window_width
@@ -44,12 +46,19 @@ class FourPadPong:
         self.ball = Ball(width_scale*(GAME_DIM_X//2), height_scale*(GAME_DIM_Y//2),
                          self.width_scale, self.height_scale, window_width, window_height, GAME_DIM_X, radius=5)
 
-        self.score = 0
+        self.score = (0, 0, 0, 0)
         self.window = window
 
     def draw_score(self):
-        score_text = self.SCORE_FONT.render(f"{self.score}", 1, self.WHITE)
-        self.window.blit(score_text, (15, 20))
+        score_text1 = self.SCORE_FONT.render(f"{self.score[0]}", 1, self.CYAN)
+        score_text2 = self.SCORE_FONT.render(f"{self.score[1]}", 1, self.CYAN)
+        score_text3 = self.SCORE_FONT.render(f"{self.score[2]}", 1, self.CYAN)
+        score_text4 = self.SCORE_FONT.render(f"{self.score[3]}", 1, self.CYAN)
+        self.window.blit(score_text1, (15, 20))
+        self.window.blit(score_text2, (self.window_width-50, 20))
+        self.window.blit(score_text3, (15, self.window_height-50))
+        self.window.blit(
+            score_text4, (self.window_width-50, self.window_height-50))
 
     def handle_ball_paddle_collision(self, ball_x=None, ball_y=None, paddle_number=1):
         ''' function to handle ball speed and direction change when touches a paddle '''
@@ -101,10 +110,10 @@ class FourPadPong:
                 x_vel *= 2
 
         # speed constraints
-        if abs(x_vel) / self.width_scale > self.ball.MAX_VEL:
+        if abs(x_vel) // self.width_scale > self.ball.MAX_VEL:
             x_vel = - self.ball.MAX_VEL * \
                 self.width_scale if x_vel < 0 else self.ball.MAX_VEL * self.width_scale
-        if abs(y_vel) / self.width_scale > self.ball.MAX_VEL:
+        if abs(y_vel) // self.width_scale > self.ball.MAX_VEL:
             y_vel = - self.ball.MAX_VEL * \
                 self.height_scale if y_vel < 0 else self.ball.MAX_VEL * self.height_scale
 
@@ -116,6 +125,11 @@ class FourPadPong:
         ''' paddle_reward = 1 means Paddle1 caught the ball  '''
         ''' paddle_reward = -1 means Paddle1 did not catch the ball  '''
         if type == COOPERATION:
+            if paddle_reward == 1 or paddle_reward == 2 or paddle_reward == 3 or paddle_reward == 4:
+                return (1, 1, 1, 1)
+            if paddle_reward == -3 or paddle_reward == -4 or paddle_reward == -1 or paddle_reward == -2:
+                return (-1, -1, -1, -1)
+        if type == TEAM_COOPERATION:
             if paddle_reward == 1 or paddle_reward == 2 or paddle_reward == -3 or paddle_reward == -4:
                 return (1, 1, -1, -1)
             if paddle_reward == 3 or paddle_reward == 4 or paddle_reward == -1 or paddle_reward == -2:
@@ -246,10 +260,11 @@ class FourPadPong:
         self.paddle3.draw(self.window)
         self.paddle4.draw(self.window)
         self.ball.draw(self.window)
-        self.drawGrid()
+        # self.drawGrid()
 
     def loop(self):
-        self.score += self.handle_collision()
+        self.score = tuple(
+            map(operator.add, self.score, self.handle_collision()))
 
         game_info = GameInformation(self.score)
 
