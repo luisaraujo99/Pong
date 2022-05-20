@@ -16,9 +16,9 @@ matplotlib.rc('xtick', labelsize=7)
 matplotlib.rc('ytick', labelsize=7)
 
 
-WIDTH_SCALE, HEIGHT_SCALE = 14, 12
-GAME_DIM_X, GAME_DIM_Y = 50, 70
-PAD_SIZE = 10
+WIDTH_SCALE, HEIGHT_SCALE = 16, 14
+GAME_DIM_X, GAME_DIM_Y = 50, 60
+PAD_SIZE = 8
 WIDTH, HEIGHT = GAME_DIM_X*WIDTH_SCALE, GAME_DIM_Y*HEIGHT_SCALE
 X_PAD_DIM = GAME_DIM_X-(PAD_SIZE-1)
 
@@ -89,7 +89,7 @@ class PongGame:
             rewards_queue.pop(0)
         rewards_queue.append(0 if r == -1 else 1)
 
-    def Q_learning_algorithm(self, epochs=5000, episodes=1000, show_v_plot=True, render=True):
+    def Q_learning_algorithm(self, epochs=2000, episodes=1000, show_v_plot=True, render=False):
         clock = pygame.time.Clock()
         run = True
 
@@ -112,12 +112,15 @@ class PongGame:
         plt.style.use('fivethirtyeight')
 
         # aux arrays
-        v_max_mean1, v_max_mean2 = [], []
-        v_mid_mean1, v_mid_mean2 = [], []
-        v_min_mean1, v_min_mean2 = [], []
-        exploration_rates1, exploration_rates2 = [], []
-        states_visited_ratio1, states_visited_ratio2 = [], []
-        learning_rate_evol1, learning_rate_evol2 = [], []
+        v_max_mean1, v_max_mean2 = np.zeros(epochs), np.zeros(epochs)
+        v_mid_mean1, v_mid_mean2 = np.zeros(epochs), np.zeros(epochs)
+        v_min_mean1, v_min_mean2 = np.zeros(epochs), np.zeros(epochs)
+        exploration_rates1, exploration_rates2 = np.zeros(
+            epochs), np.zeros(epochs)
+        states_visited_ratio1, states_visited_ratio2 = np.zeros(
+            epochs), np.zeros(epochs)
+        learning_rate_evol1, learning_rate_evol2 = np.zeros(
+            epochs), np.zeros(epochs)
         rewards1, rewards2 = [], []
         rewards_queue1, rewards_queue2 = [], []
 
@@ -129,13 +132,14 @@ class PongGame:
             episode = 0
             game_info = self.game.loop()
 
-            v_max1, v_max2, v_mid1, v_mid2, v_min1, v_min2 = [], [], [], [], [], []
+            v_max1, v_max2, v_mid1, v_mid2, v_min1, v_min2 = np.zeros(
+                episodes), np.zeros(episodes), np.zeros(episodes), np.zeros(episodes), np.zeros(episodes), np.zeros(episodes)
 
             with alive_bar(episodes, bar='blocks', title=f'Epoch {epoch}', spinner='arrows') as bar:
                 while episode < episodes and run:
 
                     if render:
-                        clock.tick(25)
+                        clock.tick(20)
                         for event in pygame.event.get():
                             if event.type == pygame.QUIT:
                                 run = False
@@ -186,6 +190,15 @@ class PongGame:
 
                     r = self.reward(init_score, end_score)
 
+                    new_state_p1 = ((self.paddle1.x//WIDTH_SCALE), (self.ball.y //
+                                                                    HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
+
+                    new_state_p2 = ((self.paddle1.x//WIDTH_SCALE), (self.ball.y //
+                                                                    HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
+
+                    q_ai_1.q(action_p1, r, state_p1, new_state_p1)
+                    q_ai_2.q(action_p2, r, state_p2, new_state_p2)
+
                     if r == 1:
                         rewards_in_a_row1 += 1
                         rewards_in_a_row2 += 1
@@ -200,25 +213,18 @@ class PongGame:
                         rewards1.append(np.mean(rewards_queue1))
                         rewards2.append(np.mean(rewards_queue2))
 
-                    new_state_p1 = ((self.paddle1.x//WIDTH_SCALE), (self.ball.y //
-                                                                    HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
-
-                    new_state_p2 = ((self.paddle1.x//WIDTH_SCALE), (self.ball.y //
-                                                                    HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
-
-                    q_ai_1.q(action_p1, r, state_p1, new_state_p1)
-                    q_ai_2.q(action_p2, r, state_p2, new_state_p2)
+                    
 
                     #################### SAVE TRAINING DATA ####################
                     # pad1
-                    v_max1.append(q_ai_1.v(state_p1))
-                    v_min1.append(q_ai_1.v_min(state_p1))
-                    v_mid1.append(q_ai_1.v_mid(state_p1))
+                    v_max1[episode] = q_ai_1.v(state_p1)
+                    v_min1[episode] = q_ai_1.v_min(state_p1)
+                    v_mid1[episode] = q_ai_1.v_mid(state_p1)
                     q_ai_1.q_state_counter(state=state_p1)
                     # pad2
-                    v_max2.append(q_ai_2.v(state_p2))
-                    v_min2.append(q_ai_2.v_min(state_p2))
-                    v_mid2.append(q_ai_2.v_mid(state_p2))
+                    v_max2[episode] = q_ai_2.v(state_p2)
+                    v_min2[episode] = q_ai_2.v_min(state_p2)
+                    v_mid2[episode] = q_ai_2.v_mid(state_p2)
                     q_ai_2.q_state_counter(state=state_p2)
                     # ############################################################
 
@@ -226,10 +232,10 @@ class PongGame:
                     #q_ai_1.exploration_rate_decay(time, episodes*epochs)
                     #q_ai_2.exploration_rate_decay(time, episodes*epochs)
                     q_ai_1.exploration_rate_decay2(
-                        ((q_ai_1.q_matrix_counter[0:, 1:GAME_DIM_Y-1, 0:]) < 4).sum()/(q_ai_1.q_matrix_counter[0:, 1:GAME_DIM_Y-1, 0:]).size)
+                        ((q_ai_1.q_matrix_counter[0:, 1:GAME_DIM_Y-1, 0:]) < 2).sum()/(q_ai_1.q_matrix_counter[0:, 1:GAME_DIM_Y-1, 0:]).size)
 
                     q_ai_2.exploration_rate_decay2(
-                        ((q_ai_2.q_matrix_counter[0:, 1:GAME_DIM_Y-1, 0:]) < 4).sum()/(q_ai_1.q_matrix_counter[0:, 1:GAME_DIM_Y-1, 0:]).size)
+                        ((q_ai_2.q_matrix_counter[0:, 1:GAME_DIM_Y-1, 0:]) < 2).sum()/(q_ai_1.q_matrix_counter[0:, 1:GAME_DIM_Y-1, 0:]).size)
 
                     # iteration
                     episode += 1
@@ -241,21 +247,21 @@ class PongGame:
                     bar()
 
             #################### SAVE TRAINING DATA ####################
-            exploration_rates1.append(q_ai_1.exploration_rate)
-            v_max_mean1.append(np.mean(v_max1))
-            v_min_mean1.append(np.mean(v_min1))
-            v_mid_mean1.append(np.mean(v_mid1))
-            states_visited_ratio1.append(
-                (q_ai_1.q_matrix_counter < 1).sum()/q_ai_1.q_matrix_counter.size)
-            learning_rate_evol1.append(q_ai_1.learning_rate)
+            exploration_rates1[epoch] = q_ai_1.exploration_rate
+            v_max_mean1[epoch] = np.mean(v_max1)
+            v_min_mean1[epoch] = np.mean(v_min1)
+            v_mid_mean1[epoch] = np.mean(v_mid1)
+            states_visited_ratio1[epoch] = (
+                q_ai_1.q_matrix_counter < 1).sum()/q_ai_1.q_matrix_counter.size
+            learning_rate_evol1[epoch] = q_ai_1.learning_rate
             # pad 2 stats
-            v_max_mean2.append(np.mean(v_max2))
-            v_min_mean2.append(np.mean(v_min2))
-            v_mid_mean2.append(np.mean(v_mid2))
-            states_visited_ratio2.append(
-                (q_ai_2.q_matrix_counter < 1).sum()/q_ai_2.q_matrix_counter.size)
-            learning_rate_evol2.append(q_ai_2.learning_rate)
-            exploration_rates2.append(q_ai_2.exploration_rate)
+            exploration_rates2[epoch] = q_ai_2.exploration_rate
+            v_max_mean2[epoch] = np.mean(v_max2)
+            v_min_mean2[epoch] = np.mean(v_min2)
+            v_mid_mean2[epoch] = np.mean(v_mid2)
+            states_visited_ratio2[epoch] = (
+                q_ai_2.q_matrix_counter < 1).sum()/q_ai_2.q_matrix_counter.size
+            learning_rate_evol2[epoch] = q_ai_2.learning_rate
             ############################################################
 
             # learning rate evolution

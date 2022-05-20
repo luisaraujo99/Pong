@@ -15,8 +15,8 @@ matplotlib.rc('xtick', labelsize=7)
 matplotlib.rc('ytick', labelsize=7)
 
 
-WIDTH_SCALE, HEIGHT_SCALE = 15, 15
-GAME_DIM_X, GAME_DIM_Y = 40, 50
+WIDTH_SCALE, HEIGHT_SCALE = 24, 22
+GAME_DIM_X, GAME_DIM_Y = 40, 40
 PAD_SIZE = 8
 WIDTH, HEIGHT = GAME_DIM_X*WIDTH_SCALE, GAME_DIM_Y*HEIGHT_SCALE
 
@@ -131,15 +131,15 @@ class PongGame:
         plt.show()
 
     def enqueue(self, rewards_queue, r):
-        if len(rewards_queue) == 25:
+        if len(rewards_queue) == 50:
             rewards_queue.pop(0)
         rewards_queue.append(0 if r == -1 else 1)
 
-    def Q_learning_algorithm(self, epochs=5000, episodes=1000, show_v_plot=True, render=False):
+    def Q_learning_algorithm(self, epochs=2000, episodes=1000, show_v_plot=True, render=False):
         clock = pygame.time.Clock()
         run = True
         q_ai = Q_AI(learning_rate=1, discount_rate=0.97, X_Pad_dim=GAME_DIM_X-(PAD_SIZE-1), X_Grid_dim=GAME_DIM_X+1, Y_Grid_Dim=GAME_DIM_Y-1,
-                    learning_decay=1/1000)
+                    learning_decay=1/2700)
         filename = "LVL1_x={x}_y={y}.txt".format(
             x=GAME_DIM_X, y=GAME_DIM_Y)
         q_ai.load_file(filename=filename)
@@ -149,12 +149,12 @@ class PongGame:
         # plots
         plt.style.use('fivethirtyeight')
 
-        v_max_mean = []
-        v_mid_mean = []
-        v_min_mean = []
-        exploration_rates = []
-        states_visited_ratio = []
-        learning_rate_evol = []
+        v_max_mean = np.zeros(epochs)
+        v_mid_mean = np.zeros(epochs)
+        v_min_mean = np.zeros(epochs)
+        exploration_rates = np.zeros(epochs)
+        states_visited_ratio = np.zeros(epochs)
+        learning_rate_evol = np.zeros(epochs)
         rewards_in_a_row = 0
         time = 0
         rewards = []
@@ -165,9 +165,9 @@ class PongGame:
             episode = 0
             game_info = self.game.loop()
 
-            v_max = []
-            v_mid = []
-            v_min = []
+            v_max = np.zeros(episodes)
+            v_mid = np.zeros(episodes)
+            v_min = np.zeros(episodes)
 
             with alive_bar(episodes, bar='blocks', title=f'Epoch {epoch}', spinner='arrows') as bar:
                 while episode < episodes and run:
@@ -184,8 +184,10 @@ class PongGame:
                     state = ((self.paddle.x//WIDTH_SCALE), (self.ball.y //
                                                             HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
 
-                    action = q_ai.epsilon_greedy(state)
                     #action = q_ai.greedy(state)
+                    #action = q_ai.local_epsilon_greedy(state)
+                    #action = q_ai.epsilon_greedy(state)
+                    action = q_ai.radius_local_epsilon_greedy(state)
 
                     # right
                     if action == 2:
@@ -206,32 +208,32 @@ class PongGame:
 
                     r = self.reward(init_score, end_score)
 
-                    if r == 1:
-                        rewards_in_a_row += 1
-                        if rewards_in_a_row == 12:
-                            self.game.ball.reset()
-                            rewards_in_a_row = 0
-
-                    if abs(r) == 1:
-                        self.enqueue(rewards_queue, r)
-                        rewards.append(np.mean(rewards_queue))
-
                     new_state = ((self.paddle.x//WIDTH_SCALE), (self.ball.y //
                                                                 HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
 
                     q_ai.q(action, r, state, new_state)
 
+                    if abs(r) == 1:
+                        self.enqueue(rewards_queue, r)
+                        rewards.append(np.mean(rewards_queue))
+
+                    if r == 1:
+                        rewards_in_a_row += 1
+                        if rewards_in_a_row == 15:
+                            self.game.ball.reset()
+                            rewards_in_a_row = 0
+
                     #################### SAVE TRAINING DATA ####################
-                    v_max.append(q_ai.v(state))
-                    v_min.append(q_ai.v_min(state))
-                    v_mid.append(q_ai.v_mid(state))
+                    v_max[episode] = q_ai.v(state)
+                    v_min[episode] = q_ai.v_min(state)
+                    v_mid[episode] = q_ai.v_mid(state)
                     q_ai.q_state_counter(state=state)
                     ############################################################
 
                     #######----- EXPLORATION RATE -----#######
                     #q_ai.exploration_rate_decay(time, episodes*epochs)
                     q_ai.exploration_rate_decay2(
-                        (q_ai.q_matrix_counter < 2).sum()/q_ai.q_matrix_counter.size)
+                        (q_ai.q_matrix_counter < 8).sum()/q_ai.q_matrix_counter.size)
 
                     # iteration
                     episode += 1
@@ -243,13 +245,13 @@ class PongGame:
                     bar()
 
             #################### SAVE TRAINING DATA ####################
-            exploration_rates.append(q_ai.exploration_rate)
-            v_max_mean.append(np.mean(v_max))
-            v_min_mean.append(np.mean(v_min))
-            v_mid_mean.append(np.mean(v_mid))
-            states_visited_ratio.append(
-                (q_ai.q_matrix_counter < 1).sum()/q_ai.q_matrix_counter.size)
-            learning_rate_evol.append(q_ai.learning_rate)
+            exploration_rates[epoch] = q_ai.exploration_rate
+            v_max_mean[epoch] = np.mean(v_max)
+            v_min_mean[epoch] = np.mean(v_min)
+            v_mid_mean[epoch] = np.mean(v_mid)
+            states_visited_ratio[epoch] = (
+                q_ai.q_matrix_counter < 1).sum()/q_ai.q_matrix_counter.size
+            learning_rate_evol[epoch] = q_ai.learning_rate
             ############################################################
 
             # learning rate evolution
