@@ -9,15 +9,15 @@ import math
 
 class Q_AI:
 
-    def __init__(self, learning_rate, discount_rate, Ndim, exploration_rate, learning_decay, paddle_scale_len):
+    def __init__(self, learning_rate, discount_rate, X_Pad_dim, X_Grid_dim, Y_Grid_Dim, learning_decay):
         self.q_matrix = np.zeros(
-            (Ndim-(paddle_scale_len-1), Ndim, Ndim+1,  3))
+            (X_Pad_dim, Y_Grid_Dim, X_Grid_dim, 3))
         self.learning_rate = learning_rate
         self.discount_rate = discount_rate
-        self.exploration_rate = exploration_rate
+        self.exploration_rate = 1
         self.learning_decay = learning_decay
         self.q_matrix_counter = np.zeros(
-            (Ndim-(paddle_scale_len-1), Ndim, Ndim+1), dtype=np.int64)
+            (X_Pad_dim, Y_Grid_Dim, X_Grid_dim), dtype=np.int64)
 
     def q(self, action, reward, state, new_state):
         arg_max_action = np.argmax(self.q_matrix[new_state])
@@ -56,10 +56,10 @@ class Q_AI:
     # For values of A below 0.5, agent would be spending less time exploring and more time exploiting
     # B decides the slope of transition region between Exploration to Exploitation zone
     # C controls the steepness of left and right tail of the graph
-    def exploration_rate_decay(self, time, EPISODES, A=0.1, B=0.5, C=0.1):
+    def exploration_rate_decay(self, time, EPISODES, A=0.4, B=0.5, C=0.1):
         standardized_time = (time-A*EPISODES)/(B*EPISODES)
         cosh = np.cosh(math.exp(-standardized_time))
-        expr = 1.1-(1/cosh+(time*C/EPISODES))
+        expr = 1.3-(1/cosh+(time*C/EPISODES))
         if expr < 0:
             self.exploration_rate = 0.001
         else:

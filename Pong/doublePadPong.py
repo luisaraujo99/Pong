@@ -17,20 +17,20 @@ class DoublePadPong:
     BLACK = (0, 0, 0)
     SCORE_FONT = pygame.font.SysFont("comicsans", 50)
 
-    def __init__(self, window, window_width, window_height, width_scale, height_scale, PAD_SIZE, GAME_DIM):
+    def __init__(self, window, window_width, window_height, width_scale, height_scale, PAD_SIZE, GAME_DIM_X, GAME_DIM_Y):
         self.window_width = window_width
         self.window_height = window_height
         self.width_scale = width_scale
         self.height_scale = height_scale
 
-        self.paddle1 = Paddle(width_scale*(GAME_DIM//2), height_scale,
+        self.paddle1 = Paddle(width_scale*(GAME_DIM_X//2), height_scale,
                               width_scale*PAD_SIZE, height_scale, False, width_scale)
 
-        self.paddle2 = Paddle(width_scale*(GAME_DIM//2), self.window_height -
+        self.paddle2 = Paddle(width_scale*(GAME_DIM_X//2), self.window_height -
                               2*height_scale, width_scale*PAD_SIZE, height_scale, False, width_scale)
 
-        self.ball = Ball(width_scale*(GAME_DIM//2), height_scale*(GAME_DIM//2),
-                         self.width_scale, self.height_scale, window_width, window_height, GAME_DIM)
+        self.ball = Ball(width_scale*(GAME_DIM_X//2), height_scale*(GAME_DIM_Y//2),
+                         self.width_scale, self.height_scale, window_width, window_height, GAME_DIM_X, radius=5)
 
         self.score = 0
         self.window = window
@@ -197,12 +197,12 @@ class DoublePadPong:
             lambda_y = (self.ball.y-(self.paddle1.y +
                         self.paddle1.height))/self.ball.y_vel
             ball_x = self.ball.x+lambda_y*self.ball.x_vel
-            ball_y = self.paddle1.y
+            ball_y = self.paddle1.y+self.paddle1.height
             if ball_x >= self.paddle1.x and ball_x <= self.paddle1.x+self.paddle1.width:
                 self.ball.y_vel *= -1
                 self.handle_ball_paddle_collision(ball_x, 1)
                 ball_x = ball_x+(1-lambda_y)*self.ball.x_vel
-                ball_y = self.paddle1.y + (1-lambda_y)*self.ball.y_vel
+                ball_y = ball_y + (1-lambda_y)*self.ball.y_vel
                 reward = 1
             else:
                 self.ball.reset()
@@ -236,15 +236,7 @@ class DoublePadPong:
         for x in range(0, self.window_width, self.width_scale):
             pygame.draw.rect(self.window, self.GREY,
                              (x, 0, 1, self.window_height))
-        for y in range(0, self.window_width, self.height_scale):
-            pygame.draw.rect(self.window, self.GREY,
-                             (0, y, self.window_width, 1))
-
-    def drawBallFlowGrid(self):
-        for x in range(0, self.window_width, self.width_scale):
-            pygame.draw.rect(self.window, self.GREY,
-                             (x, 0, 1, self.window_height))
-        for y in range(0, self.window_width, self.height_scale):
+        for y in range(0, self.window_height, self.height_scale):
             pygame.draw.rect(self.window, self.GREY,
                              (0, y, self.window_width, 1))
 
