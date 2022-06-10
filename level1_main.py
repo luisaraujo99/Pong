@@ -1,24 +1,22 @@
-
-from fileinput import filename
-from sklearn import preprocessing
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-from matplotlib import colors
 import numpy as np
 from Pong import SinglePadPong
 from Pong import Q_AI
+from Pong.PlotTool import *
 import pygame
 from alive_progress import alive_bar
 from itertools import count
-import matplotlib
-matplotlib.rc('xtick', labelsize=7)
-matplotlib.rc('ytick', labelsize=7)
-
+import os
 
 WIDTH_SCALE, HEIGHT_SCALE = 24, 22
 GAME_DIM_X, GAME_DIM_Y = 40, 40
 PAD_SIZE = 8
 WIDTH, HEIGHT = GAME_DIM_X*WIDTH_SCALE, GAME_DIM_Y*HEIGHT_SCALE
+EPS_GREEDY, GREEDY, STATE_LOC_GREEDY, WIND_LOC_GREEDY = 1, 2, 3, 4
+
+plt.style.use('fivethirtyeight')
+plt.rc('xtick', labelsize=7)
+plt.rc('ytick', labelsize=7)
 
 
 class PongGame:
@@ -31,123 +29,23 @@ class PongGame:
     def reward(self, initial_score, end_score):
         return end_score - initial_score
 
-    def plot_v(self, matrix_range, epochs, vmax, vmin, vmid, softmax, rewards, exploration_rates, states_visited_ratio, learning_rate_evol):
-
-        xvals = [i for i in range(epochs)]
-        x2vals = [i for i in range(matrix_range)]
-        xvals3 = [i for i in range(len(rewards))]
-        fig, axs = plt.subplots(4)
-        axs[0].set_title("Matrix values Mean per epoch",
-                         fontdict={'fontsize': 10})
-        axs[0].plot(xvals, vmax, color='r', linewidth=1)
-        axs[0].plot(xvals, vmin, color='g', linewidth=1)
-        axs[0].plot(xvals, vmid, color='b', linewidth=1)
-        axs[0].legend(['vmax', "vmin", "vmid"])
-        axs[1].set_title(
-            "Softmax of Matrix values after training", fontdict={'fontsize': 10})
-        axs[1].plot(x2vals, [Max for (Max, Min) in softmax],
-                    color='r', linewidth=1)
-        axs[1].plot(x2vals, [Min for (Max, Min) in softmax],
-                    color='b', linewidth=1)
-        axs[1].legend(["max", "min"])
-        axs[2].set_title(
-            "Rewards ratio per epoch and exploration rate", fontdict={'fontsize': 10})
-        axs[2].plot(xvals, exploration_rates, linewidth=1)
-        axs[2].plot(xvals, states_visited_ratio, linewidth=1)
-        axs[2].plot(xvals, learning_rate_evol, linewidth=1)
-        axs[2].legend(["explor. rate",
-                      "stat. visited", "learning rate"], fontsize=8)
-        axs[3].set_title(
-            "Total rewards in last 20 episodes", fontdict={'fontsize': 10})
-        axs[3].plot(xvals3, rewards, linewidth=1)
-
-        plt.show()
-
-    def plot_color_action_matrix(self, q_matrix):
-
-        pad_dim, y_dim, x_dim, action = q_matrix.shape
-        max_matrix = np.zeros((pad_dim, y_dim, x_dim))
-
-        for pad in range(pad_dim):
-            for y in range(y_dim):
-                for x in range(x_dim):
-                    max_matrix[(pad, y, x)] = np.argmax(
-                        q_matrix[(pad, y, x)])
-
-        fig, axs = plt.subplots(3, 3, sharey=True, figsize=(10, 10))
-        fig.suptitle('Action per state', fontsize=13)
-        cmap = colors.ListedColormap(['red', 'green', 'blue'])
-        for p_pos in range(pad_dim):
-            axes = axs[p_pos // 3, p_pos % 3]
-            axes.set_title('paddle x: {}'.format(p_pos), fontsize=10)
-            axes.matshow(
-                max_matrix[p_pos], origin='lower', cmap=cmap)
-            axes.grid(False)
-        axs[0, 0].invert_yaxis()
-        fig.tight_layout()
-        plt.show()
-
-    def plot_matrix_state_counter(self, matrix_counter):
-        pad_dim, y_dim, x_dim = matrix_counter.shape
-        fig, axs = plt.subplots(3, 3, figsize=(10, 10))
-        fig.suptitle('State visits counter', fontsize=13)
-        for p_pos in range(pad_dim):
-            axes = axs[p_pos // 3, p_pos % 3]
-            axes.set_title('paddle x: {}'.format(p_pos), fontsize=10)
-            axes.matshow(matrix_counter[p_pos], cmap=plt.cm.Blues)
-            for y in range(y_dim):
-                for x in range(x_dim):
-                    axes.text(
-                        x, y, str(matrix_counter[(p_pos, y, x)]), va='center', ha='center', fontsize=5)
-
-            axes.grid(False)
-        fig.tight_layout()
-        plt.show()
-
-    def plot_max_val_gradient(self, matrix):
-        pad_dim, y_dim, x_dim, action = matrix.shape
-        max_matrix = np.zeros((pad_dim, y_dim, x_dim))
-
-        for pad in range(pad_dim):
-            for y in range(y_dim):
-                for x in range(x_dim):
-                    max_matrix[(pad, y, x)] = np.max(
-                        matrix[(pad, y, x)])
-
-        fig, axs = plt.subplots(3, 3, figsize=(10, 10))
-        fig.suptitle('Max value per state', fontsize=13)
-        for p_pos in range(pad_dim):
-            axes = axs[p_pos // 3, p_pos % 3]
-            axes.set_title('paddle x: {}'.format(p_pos), fontsize=10)
-            axes.matshow(
-                preprocessing.MinMaxScaler().fit_transform(max_matrix[p_pos]), cmap=plt.cm.Blues)
-            for y in range(y_dim):
-                for x in range(x_dim):
-                    axes.text(
-                        x, y, str(round(np.max(matrix[(p_pos, y, x)]), 1)), va='center', ha='center', fontsize=7)
-
-            axes.grid(False)
-        fig.tight_layout()
-        plt.show()
-
     def enqueue(self, rewards_queue, r):
-        if len(rewards_queue) == 50:
+        if len(rewards_queue) == 30:
             rewards_queue.pop(0)
         rewards_queue.append(0 if r == -1 else 1)
 
-    def Q_learning_algorithm(self, epochs=2000, episodes=1000, show_v_plot=True, render=False):
+    def Q_learning_algorithm(self, epochs=200, episodes=5000, show_v_plot=True, render=True, Action_method=EPS_GREEDY, exploration_rate=0, visits_threshold=20, reset_on=10):
         clock = pygame.time.Clock()
         run = True
-        q_ai = Q_AI(learning_rate=1, discount_rate=0.97, X_Pad_dim=GAME_DIM_X-(PAD_SIZE-1), X_Grid_dim=GAME_DIM_X+1, Y_Grid_Dim=GAME_DIM_Y-1,
-                    learning_decay=1/2700)
-        filename = "LVL1_x={x}_y={y}.txt".format(
-            x=GAME_DIM_X, y=GAME_DIM_Y)
+        q_ai = Q_AI(exploration_rate=exploration_rate, X_Pad_dim=GAME_DIM_X-(PAD_SIZE-1), X_Grid_dim=GAME_DIM_X+1, Y_Grid_Dim=GAME_DIM_Y-1,
+                    learning_decay=1/4000)
+        filename = "./level1_results/LVL1_x={x}_y={y}_Method={m}_epochs={e}_vt={vt}_reseton={reset_on}.txt".format(
+            x=GAME_DIM_X, y=GAME_DIM_Y, m=Action_method, e=epochs, vt=visits_threshold, reset_on=reset_on)
         q_ai.load_file(filename=filename)
 
         epoch = 0
 
         # plots
-        plt.style.use('fivethirtyeight')
 
         v_max_mean = np.zeros(epochs)
         v_mid_mean = np.zeros(epochs)
@@ -158,7 +56,11 @@ class PongGame:
         rewards_in_a_row = 0
         time = 0
         rewards = []
+        rewards_seq = []
         rewards_queue = []
+
+        if not render:
+            os.environ['SDL_VIDEODRIVER'] = 'dummy'
 
         while epoch < epochs:
 
@@ -184,10 +86,8 @@ class PongGame:
                     state = ((self.paddle.x//WIDTH_SCALE), (self.ball.y //
                                                             HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
 
-                    #action = q_ai.greedy(state)
-                    #action = q_ai.local_epsilon_greedy(state)
-                    #action = q_ai.epsilon_greedy(state)
-                    action = q_ai.radius_local_epsilon_greedy(state)
+                    action = q_ai.action_chooser_method(
+                        state, Action_method)
 
                     # right
                     if action == 2:
@@ -216,10 +116,11 @@ class PongGame:
                     if abs(r) == 1:
                         self.enqueue(rewards_queue, r)
                         rewards.append(np.mean(rewards_queue))
+                        rewards_seq.append(r)
 
                     if r == 1:
                         rewards_in_a_row += 1
-                        if rewards_in_a_row == 15:
+                        if rewards_in_a_row == reset_on:
                             self.game.ball.reset()
                             rewards_in_a_row = 0
 
@@ -233,7 +134,7 @@ class PongGame:
                     #######----- EXPLORATION RATE -----#######
                     #q_ai.exploration_rate_decay(time, episodes*epochs)
                     q_ai.exploration_rate_decay2(
-                        (q_ai.q_matrix_counter < 8).sum()/q_ai.q_matrix_counter.size)
+                        (q_ai.q_matrix_counter < visits_threshold).sum()/q_ai.q_matrix_counter.size)
 
                     # iteration
                     episode += 1
@@ -268,23 +169,46 @@ class PongGame:
                    for y in range(Y) for z in range(Z)]
 
         if show_v_plot:
-            self.plot_v(X*Y*Z, epochs, v_max_mean,
-                        v_min_mean, v_mid_mean, softmax, rewards, exploration_rates, states_visited_ratio, learning_rate_evol)
+            plot_v(X*Y*Z, epochs, v_max_mean,
+                   v_min_mean, v_mid_mean, softmax, rewards, exploration_rates, states_visited_ratio, learning_rate_evol, filename.replace('txt', 'png'))
             if GAME_DIM_Y == 10:
-                self.plot_color_action_matrix(q_ai.q_matrix)
-                self.plot_matrix_state_counter(q_ai.q_matrix_counter)
-                self.plot_max_val_gradient(q_ai.q_matrix)
+                plot_color_action_matrix(q_ai.q_matrix)
+                plot_matrix_state_counter(q_ai.q_matrix_counter)
+                plot_max_val_gradient(q_ai.q_matrix)
 
         # close pygame env
         pygame.quit()
+        return q_ai.fitness_score(rewards_seq, softmax)
+
+
+def genetic_algorithm():
+    agents_fitness = {}
+    win = pygame.display.set_mode((1, 1))
+    pong = PongGame(win, WIDTH, HEIGHT)
+    parameters_by_agent = [(2, 10, WIND_LOC_GREEDY), (7, 10, WIND_LOC_GREEDY), (6, 10, WIND_LOC_GREEDY),
+                           (4, 15, WIND_LOC_GREEDY), (5, 10, WIND_LOC_GREEDY), (2, 3, WIND_LOC_GREEDY)]
+    for generation in range(2, 4, 2):
+        for params in parameters_by_agent:
+            vt, reset_on, method = params
+            agents_fitness[params] = pong.Q_learning_algorithm(
+                render=False, Action_method=method, epochs=generation, visits_threshold=vt, reset_on=reset_on)
+        # pop the two worst agents
+        parameters_by_agent = sorted(parameters_by_agent,
+                                     reverse=True, key=lambda p: agents_fitness[p])[:-2]
+
+    print(agents_fitness)
 
 
 def main():
-    win = pygame.display.set_mode((WIDTH, HEIGHT))
+    win = pygame.display.set_mode((1, 1))
     pygame.display.set_caption("Single Pad Pong")
     pong = PongGame(win, WIDTH, HEIGHT)
-    plt.show()
-    pong.Q_learning_algorithm()
+    # for method in [EPS_GREEDY, GREEDY, STATE_LOC_GREEDY, WIND_LOC_GREEDY]:
+    #     pong.Q_learning_algorithm(Action_method=method
+    pong.Q_learning_algorithm(
+        render=False, Action_method=WIND_LOC_GREEDY, epochs=50, visits_threshold=8, reset_on=18)
+    # pong.Q_learning_algorithm(exploration_rate=0.25)
 
 
-main()
+# main()
+genetic_algorithm()
