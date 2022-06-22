@@ -1,6 +1,13 @@
 from .paddle import Paddle
 from .ball import Ball
 import pygame
+import operator
+
+
+COOPERATION = 1
+TEAM_COOPERATION = 2
+ALL_VS_ALL = 3
+PERSONALITY_COOPERATION = 4
 
 
 class GameInformation:
@@ -32,12 +39,14 @@ class DoublePadPong:
         self.ball = Ball(width_scale*(GAME_DIM_X//2), height_scale*(GAME_DIM_Y//2),
                          self.width_scale, self.height_scale, window_width, window_height, GAME_DIM_X, radius=5)
 
-        self.score = 0
+        self.score = (0, 0)
         self.window = window
 
     def draw_score(self):
-        score_text = self.SCORE_FONT.render(f"{self.score}", 1, self.WHITE)
-        self.window.blit(score_text, (15, 20))
+        score_text1 = self.SCORE_FONT.render(f"{self.score[0]}", 1, self.CYAN)
+        score_text2 = self.SCORE_FONT.render(f"{self.score[1]}", 1, self.CYAN)
+        self.window.blit(score_text1, (15, 20))
+        self.window.blit(score_text2, (15, self.window_height-50))
 
     def handle_ball_paddle_collision(self, ball_x, paddle_number):
 
@@ -73,9 +82,24 @@ class DoublePadPong:
         self.ball.x_vel = x_vel
         self.ball.y_vel = y_vel
 
+    def reward_type(self, paddle_reward, type=COOPERATION):
+        ''' function used to create a reward to manipulate the way the paddles behave '''
+        ''' paddle_reward = 1 means Paddle1 caught the ball  '''
+        ''' paddle_reward = -1 means Paddle1 did not catch the ball  '''
+        if type == COOPERATION:
+            if paddle_reward == 1 or paddle_reward == 2:
+                return (1, 1)
+            if paddle_reward == -1 or paddle_reward == -2:
+                return (-1, -1)
+        if type == PERSONALITY_COOPERATION:
+            if paddle_reward == 1 or paddle_reward == 2:
+                return (1, 1)
+            if paddle_reward == -1 or paddle_reward == -2:
+                return (-10, -10)
+
     def handle_collision(self):
         (ball_x, ball_y) = self.ball.move()
-        reward = 0
+        reward = (0, 0)
 
         ####################################################################
         ########################### TOP   PAD ##############################
@@ -97,7 +121,7 @@ class DoublePadPong:
                 self.handle_ball_paddle_collision(ball_x, 1)
                 ball_x = ball_x+(1-lambda_y)*self.ball.x_vel
                 ball_y = self.paddle1.y + (1-lambda_y)*self.ball.y_vel
-                reward = 1
+                reward = self.reward_type(1)
 
         # TOP RIGHT (PAD)
         elif ball_x > self.window_width and ball_y < self.paddle1.y and self.paddle1.x + self.paddle1.width == self.window_width:
@@ -115,7 +139,7 @@ class DoublePadPong:
                 self.handle_ball_paddle_collision(ball_x, 1)
                 ball_x = ball_x+(1-lambda_y)*self.ball.x_vel
                 ball_y = self.paddle1.y + (1-lambda_y)*self.ball.y_vel
-                reward = 1
+                reward = self.reward_type(1)
 
         ####################################################################
         ########################### BOTTOM  PAD ############################
@@ -136,7 +160,7 @@ class DoublePadPong:
                 self.handle_ball_paddle_collision(ball_x, 2)
                 ball_x = ball_x+(1-lambda_y)*self.ball.x_vel
                 ball_y = self.paddle2.y + (1-lambda_y)*self.ball.y_vel
-                reward = 1
+                reward = self.reward_type(2)
 
         # BOTTOM RIGHT (PAD)
         elif ball_x > self.window_width and ball_y > self.paddle2.y and self.paddle2.x + self.paddle2.width == self.window_width:
@@ -153,7 +177,7 @@ class DoublePadPong:
                 self.handle_ball_paddle_collision(ball_x, 2)
                 ball_x = ball_x+(1-lambda_y)*self.ball.x_vel
                 ball_y = self.paddle2.y + (1-lambda_y)*self.ball.y_vel
-                reward = 1
+                reward = self.reward_type(2)
 
         ##################################################################
         ##################################################################
@@ -186,10 +210,10 @@ class DoublePadPong:
                 self.handle_ball_paddle_collision(ball_x, 2)
                 ball_x = ball_x+(1-lambda_y)*self.ball.x_vel
                 ball_y = self.paddle2.y + (1-lambda_y)*self.ball.y_vel
-                reward = 1
+                reward = self.reward_type(2)
             else:
                 self.ball.reset()
-                return -1
+                return self.reward_type(-2)
 
         # TOP PAD LINE
         if ball_y < self.paddle1.y+self.paddle1.height:
@@ -203,10 +227,10 @@ class DoublePadPong:
                 self.handle_ball_paddle_collision(ball_x, 1)
                 ball_x = ball_x+(1-lambda_y)*self.ball.x_vel
                 ball_y = ball_y + (1-lambda_y)*self.ball.y_vel
-                reward = 1
+                reward = self.reward_type(1)
             else:
                 self.ball.reset()
-                return -1
+                return self.reward_type(-1)
 
         ball_x = int(ball_x)
         ball_y = int(ball_y)
@@ -246,10 +270,11 @@ class DoublePadPong:
         self.paddle1.draw(self.window)
         self.paddle2.draw(self.window)
         self.ball.draw(self.window)
-        self.drawGrid()
+        # self.drawGrid()
 
     def loop(self):
-        self.score += self.handle_collision()
+        self.score = tuple(
+            map(operator.add, self.score, self.handle_collision()))
 
         game_info = GameInformation(self.score)
 
