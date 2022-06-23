@@ -29,44 +29,67 @@ class PongGame:
         self.paddle1 = self.game.paddle1
         self.paddle2 = self.game.paddle2
 
+    def method2str(self, method):
+        if method == GREEDY:
+            return "GREEDY/"
+        elif method == EPS_GREEDY:
+            return 'EPS_GREEDY/'
+        elif method == STATE_LOC_GREEDY:
+            return 'STATE_LOC_GREEDY/'
+        elif method == WIND_LOC_GREEDY:
+            return 'WIND_LOC_GREEDY/'
+
     def reward(self, initial_score, end_score):
         return tuple(
             map(operator.sub, end_score, initial_score))
 
+    def create_paths(self, Action_method):
+        # check if the path exists
+        if not os.path.isdir('./level2_results'):
+            os.mkdir('./level2_results')
+        path_name = "./level2_results/X={x}Y={y}".format(
+            x=GAME_DIM_X, y=GAME_DIM_Y)
+        if not os.path.isdir(path_name):
+            os.mkdir(path_name)
+        # method path
+        method_path_name = "./level2_results/X={x}Y={y}/{method}".format(
+            x=GAME_DIM_X, y=GAME_DIM_Y, method=self.method2str(Action_method))
+        if not os.path.isdir(method_path_name):
+            os.mkdir(method_path_name)
+
     def enqueue(self, rewards_queue, r):
         """ Function to help creating a sliding window to save game status"""
-        if len(rewards_queue) == 50:
+        if len(rewards_queue) == 500:
             rewards_queue.pop(0)
         rewards_queue.append(0 if r == -1 else 1)
 
     def Q_learning_algorithm(self, epochs=200, episodes=5000, show_v_plot=True, render=True,
-                             negative_propagation=True, Action_method=(EPS_GREEDY, EPS_GREEDY), discount_rate=0.97,
-                             lr_omega=1/2, exploration_rate=1, visits_threshold=20, reset_on=10):
+                             negative_propagation=False, Action_method=(EPS_GREEDY, EPS_GREEDY), discount_rate=0.97, lr=1,
+                             exploration_rate=1, visits_threshold=20, reset_on=10):
 
         clock = pygame.time.Clock()
         run = True
 
         ###### Declaring Q_AI Instances ######
-        q_ai_1 = Q_AI(learning_rate=1, discount_rate=0.97, X_Pad_dim=GAME_DIM_X -
-                      (PAD_SIZE-1), X_Grid_dim=GAME_DIM_X+1, Y_Grid_Dim=GAME_DIM_Y-1)
+        q_ai_1 = Q_AI(learning_rate=lr, discount_rate=0.97, X_Pad_dim=GAME_DIM_X -
+                      (PAD_SIZE-1), X_Grid_dim=GAME_DIM_X+1, Y_Grid_Dim=GAME_DIM_Y-1, seed=np.random.default_rng(12022))
 
-        q_ai_2 = Q_AI(learning_rate=1, discount_rate=0.97, X_Pad_dim=GAME_DIM_X -
-                      (PAD_SIZE-1), X_Grid_dim=GAME_DIM_X+1, Y_Grid_Dim=GAME_DIM_Y-1)
+        q_ai_2 = Q_AI(learning_rate=lr, discount_rate=0.97, X_Pad_dim=GAME_DIM_X -
+                      (PAD_SIZE-1), X_Grid_dim=GAME_DIM_X+1, Y_Grid_Dim=GAME_DIM_Y-1, seed=np.random.default_rng(22022))
 
-        # if possible, load previous AI state
-        filename1 = "./level2_results/LVL2_P1_x={x}_y={y}_Method={m}_epochs={e}_er={er}.txt".format(
-            x=GAME_DIM_X, y=GAME_DIM_Y, m=Action_method, e=epochs, er=exploration_rate)
-        filename2 = "./level2_results/LVL2_P2_x={x}_y={y}_Method={m}_epochs={e}_er={er}.txt".format(
-            x=GAME_DIM_X, y=GAME_DIM_Y, m=Action_method, e=epochs, er=exploration_rate)
+        # create paths to save files
+        self.create_paths(Action_method[0])
+        self.create_paths(Action_method[1])
 
-        # check if the path exists
-        path_name = "./level1_results/X={x}Y={y}".format(
-            x=GAME_DIM_X, y=GAME_DIM_Y)
-        if not os.path.isdir(path_name):
-            os.mkdir(path_name)
-        # if possible, load previous AI state
-        filename1 = "./level1_results/X={x}Y={y}/Method={m}_epochs={e}_vt={vt}_reseton={reset_on}_lromega={lromega}_dr={dr}_negprop={np}.txt".format(
-            x=GAME_DIM_X, y=GAME_DIM_Y, m=Action_method, e=epochs, vt=visits_threshold, reset_on=reset_on, lromega=lr_omega, dr=discount_rate, np=negative_propagation)
+        filename1 = "./level2_results/X={x}Y={y}/{method}P1_epochs={e}_vt={vt}_reseton={reset_on}_lr={lr}_dr={dr}_negprop={np}.txt".format(
+            x=GAME_DIM_X, y=GAME_DIM_Y, m=Action_method, e=epochs,
+            vt=visits_threshold, reset_on=reset_on, lr=lr,
+            dr=discount_rate, np=negative_propagation, method=self.method2str(Action_method[0]))
+
+        filename2 = "./level2_results/X={x}Y={y}/{method}P2_epochs={e}_vt={vt}_reseton={reset_on}_lr={lr}_dr={dr}_negprop={np}.txt".format(
+            x=GAME_DIM_X, y=GAME_DIM_Y, m=Action_method, e=epochs,
+            vt=visits_threshold, reset_on=reset_on, lr=lr,
+            dr=discount_rate, np=negative_propagation, method=self.method2str(Action_method[1]))
 
         q_ai_1.load_file(filename=filename1)
         q_ai_2.load_file(filename=filename2)
@@ -78,6 +101,8 @@ class PongGame:
         v_max_mean1, v_max_mean2 = np.zeros(epochs), np.zeros(epochs)
         v_mid_mean1, v_mid_mean2 = np.zeros(epochs), np.zeros(epochs)
         v_min_mean1, v_min_mean2 = np.zeros(epochs), np.zeros(epochs)
+        maximum_rec_val1 = np.zeros(epochs)
+        maximum_rec_val2 = np.zeros(epochs)
         exploration_rates1, exploration_rates2 = np.zeros(
             epochs), np.zeros(epochs)
         states_visited_ratio1, states_visited_ratio2 = np.zeros(
@@ -109,9 +134,9 @@ class PongGame:
                     state_p2 = ((self.paddle2.x//WIDTH_SCALE), (self.ball.y //
                                                                 HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
                     action_p1 = q_ai_1.action_chooser_method(
-                        state_p1, Action_method[0])
+                        state_p1, Action_method[0], visits_threshold)
                     action_p2 = q_ai_2.action_chooser_method(
-                        state_p2, Action_method[1])
+                        state_p2, Action_method[1], visits_threshold)
                     ##########################################
                     ################# PAD 1 ##################
                     # right
@@ -145,20 +170,24 @@ class PongGame:
                                                                     HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
                     q_ai_1.q(action_p1, r1, state_p1, new_state_p1)
                     q_ai_2.q(action_p2, r2, state_p2, new_state_p2)
-                    if r1 == 1:
+                    if r1 > 0:
                         rewards_in_a_row1 += 1
                         if rewards_in_a_row1 == 15:
                             self.game.ball.reset()
                             rewards_in_a_row1 = 0
-                    if abs(r1) == 1:
+                    elif r1 < 0:
+                        rewards_in_a_row1 = 0
+                    if abs(r1) > 0:
                         self.enqueue(rewards_queue1, r1)
                         rewards1.append(np.mean(rewards_queue1))
-                    if r2 == 1:
+                    if r2 > 1:
                         rewards_in_a_row2 += 1
                         if rewards_in_a_row2 == 15:
                             self.game.ball.reset()
                             rewards_in_a_row2 = 0
-                    if abs(r2) == 1:
+                    elif r2 < 0:
+                        rewards_in_a_row2 = 0
+                    if abs(r2) > 0:
                         self.enqueue(rewards_queue2, r2)
                         rewards2.append(np.mean(rewards_queue2))
                     #################### SAVE TRAINING DATA ####################
@@ -176,10 +205,10 @@ class PongGame:
                     #######----- EXPLORATION RATE -----#######
                     #q_ai_1.exploration_rate_decay(time, episodes*epochs)
                     #q_ai_2.exploration_rate_decay(time, episodes*epochs)
-                    q_ai_1.exploration_rate_decay2(
+                    q_ai_1.set_exploration_rate_decay(
                         ((q_ai_1.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]) < visits_threshold).sum()/(q_ai_1.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]).size)
-                    q_ai_2.exploration_rate_decay2(
-                        ((q_ai_2.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]) < visits_threshold).sum()/(q_ai_1.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]).size)
+                    q_ai_2.set_exploration_rate_decay(
+                        ((q_ai_2.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]) < visits_threshold).sum()/(q_ai_2.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]).size)
                     # iteration
                     episode += 1
                     time += 1
@@ -189,6 +218,7 @@ class PongGame:
                 v_max_mean1[epoch] = np.mean(v_max1)
                 v_min_mean1[epoch] = np.mean(v_min1)
                 v_mid_mean1[epoch] = np.mean(v_mid1)
+                maximum_rec_val1[epoch] = np.max(q_ai_1.q_matrix)
                 states_visited_ratio1[epoch] = (
                     q_ai_1.q_matrix_counter < 1).sum()/q_ai_1.q_matrix_counter.size
                 # pad 2 stats
@@ -196,6 +226,7 @@ class PongGame:
                 v_max_mean2[epoch] = np.mean(v_max2)
                 v_min_mean2[epoch] = np.mean(v_min2)
                 v_mid_mean2[epoch] = np.mean(v_mid2)
+                maximum_rec_val2[epoch] = np.max(q_ai_2.q_matrix)
                 states_visited_ratio2[epoch] = (
                     q_ai_2.q_matrix_counter < 1).sum()/q_ai_2.q_matrix_counter.size
                 ############################################################
@@ -220,10 +251,9 @@ class PongGame:
 
         if show_v_plot:
             plot_v(X*Y*Z, epochs, v_max_mean1,
-                   v_min_mean1, v_mid_mean1, softmax1, rewards1, exploration_rates1, states_visited_ratio1, filename1.replace('txt', 'png'))
+                   v_min_mean1, v_mid_mean1, softmax1, rewards1, exploration_rates1, states_visited_ratio1, maximum_rec_val1, filename1.replace('txt', 'png'))
             plot_v(X*Y*Z, epochs, v_max_mean2,
-                   v_min_mean2, v_mid_mean2, softmax2, rewards2, exploration_rates2, states_visited_ratio2, filename2.replace('txt', 'png'))
-
+                   v_min_mean2, v_mid_mean2, softmax2, rewards2, exploration_rates2, states_visited_ratio2, maximum_rec_val2, filename2.replace('txt', 'png'))
         # close pygame env
         pygame.quit()
 
@@ -232,9 +262,16 @@ def main():
     win = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Double Pad Pong")
     pong = PongGame(win, WIDTH, HEIGHT)
-    plt.show()
-    for i in range(5, 21, 5):
-        pong.Q_learning_algorithm(visits_threshold=i)
+
+    for m in [(4, 4)]:
+        for reseton in [15]:
+            for visits in [2]:
+                for lr in [0.9]:
+                    for neg in [False]:
+                        pong.Q_learning_algorithm(
+                            epochs=150, episodes=20000, discount_rate=0.97, lr=lr,
+                            negative_propagation=neg, visits_threshold=visits,
+                            reset_on=reseton, render=False, Action_method=m, exploration_rate=1)
 
 
 main()
