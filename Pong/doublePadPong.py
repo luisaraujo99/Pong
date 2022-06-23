@@ -84,7 +84,7 @@ class DoublePadPong:
         self.ball.x_vel = x_vel
         self.ball.y_vel = y_vel
 
-    def reward_type(self, paddle_reward, type=COOPERATION):
+    def reward_type(self, paddle_reward, type=COMP):
         ''' function used to create a reward to manipulate the way the paddles behave '''
         ''' paddle_reward = 1 means Paddle1 caught the ball  '''
         ''' paddle_reward = -1 means Paddle1 did not catch the ball  '''
@@ -219,7 +219,7 @@ class DoublePadPong:
                 ball_y = self.paddle2.y + (1-lambda_y)*self.ball.y_vel
                 reward = self.reward_type(2)
             else:
-                self.ball.reset()
+                self.ball.reset(isDoublePadPong=True)
                 return self.reward_type(-2)
 
         # TOP PAD LINE
@@ -236,7 +236,7 @@ class DoublePadPong:
                 ball_y = ball_y + (1-lambda_y)*self.ball.y_vel
                 reward = self.reward_type(1)
             else:
-                self.ball.reset()
+                self.ball.reset(isDoublePadPong=True)
                 return self.reward_type(-1)
 
         ball_x = int(ball_x)
@@ -289,6 +289,6 @@ class DoublePadPong:
 
     def reset(self):
         """Resets the entire game."""
-        self.ball.reset()
+        self.ball.reset(isDoublePadPong=True)
         self.paddle.reset()
         self.score = 0

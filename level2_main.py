@@ -13,9 +13,9 @@ plt.rc('xtick', labelsize=7)
 plt.rc('ytick', labelsize=7)
 
 
-WIDTH_SCALE, HEIGHT_SCALE = 16, 14
-GAME_DIM_X, GAME_DIM_Y = 50, 60
-PAD_SIZE = 8
+WIDTH_SCALE, HEIGHT_SCALE = 2, 2
+GAME_DIM_X, GAME_DIM_Y = 40, 50
+PAD_SIZE = 6
 WIDTH, HEIGHT = GAME_DIM_X*WIDTH_SCALE, GAME_DIM_Y*HEIGHT_SCALE
 X_PAD_DIM = GAME_DIM_X-(PAD_SIZE-1)
 EPS_GREEDY, GREEDY, STATE_LOC_GREEDY, WIND_LOC_GREEDY = 1, 2, 3, 4
@@ -264,14 +264,14 @@ def main():
     pong = PongGame(win, WIDTH, HEIGHT)
 
     for m in [(4, 4)]:
-        for reseton in [15]:
-            for visits in [2]:
-                for lr in [0.9]:
+        for reseton in [8]:
+            for visits in [8]:
+                for lr in [1]:
                     for neg in [False]:
                         pong.Q_learning_algorithm(
-                            epochs=5, episodes=20000, discount_rate=0.97, lr=lr,
+                            epochs=400, episodes=20000, discount_rate=0.97, lr=lr,
                             negative_propagation=neg, visits_threshold=visits,
-                            reset_on=reseton, render=False, Action_method=m, exploration_rate=1)
+                            reset_on=reseton, render=True, Action_method=m, exploration_rate=1)
 
 
 main()

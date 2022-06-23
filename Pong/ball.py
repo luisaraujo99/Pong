@@ -31,7 +31,7 @@ class Ball:
         new_y = self.y+self.y_vel
         return (new_x, new_y)
 
-    def reset(self, isFourPadPong=False):
+    def reset(self, isFourPadPong=False,isDoublePadPong = False):
         'Method to reset the ball position. '
 
         random_dir = self.rng_fixed_seed.choice([1, -1])
@@ -45,7 +45,9 @@ class Ball:
             self.y = self.original_y
             self.x_vel = (1-null_vel)*self.original_x_vel*random_dir
             self.y_vel = self.original_y_vel
-
+            if isDoublePadPong:
+                up_or_down = self.rng_fixed_seed.choice([1, -1])
+                self.y_vel *= up_or_down
         else:
             up_or_down = self.rng_fixed_seed.choice([1, -1])
             null_vel = self.rng_fixed_seed.choice([0, 1])
