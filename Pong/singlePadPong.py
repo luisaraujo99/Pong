@@ -59,12 +59,12 @@ class SinglePadPong:
             x_vel = 0
             y_vel *= 2
         # check if speed is not bigger then max
-        if abs(x_vel) / self.width_scale > self.ball.MAX_VEL:
-            x_vel = - self.ball.MAX_VEL * \
-                self.width_scale if x_vel < 0 else self.ball.MAX_VEL * self.width_scale
-        if abs(y_vel) / self.width_scale > self.ball.MAX_VEL:
-            y_vel = - self.ball.MAX_VEL * \
-                self.height_scale if y_vel < 0 else self.ball.MAX_VEL * self.height_scale
+        if abs(x_vel) / self.width_scale > Ball.MAX_VEL_X:
+            x_vel = - Ball.MAX_VEL_X * \
+                self.width_scale if x_vel < 0 else Ball.MAX_VEL_X * self.width_scale
+        if abs(y_vel) / self.width_scale > Ball.MAX_VEL_Y:
+            y_vel = - Ball.MAX_VEL_Y * \
+                self.height_scale if y_vel < 0 else Ball.MAX_VEL_Y * self.height_scale
 
         self.ball.x_vel = x_vel
         self.ball.y_vel = y_vel

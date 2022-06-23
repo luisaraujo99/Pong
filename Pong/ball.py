@@ -5,7 +5,8 @@ WHITE = (255, 255, 255)
 
 
 class Ball:
-    MAX_VEL = 3
+    MAX_VEL_X = 2
+    MAX_VEL_Y = 2
     COLOR = WHITE
 
     def __init__(self, x, y, width_scale, height_scale, window_width, window_height, GAME_DIM, radius=8):
@@ -31,7 +32,7 @@ class Ball:
         new_y = self.y+self.y_vel
         return (new_x, new_y)
 
-    def reset(self, isFourPadPong=False,isDoublePadPong = False):
+    def reset(self, isFourPadPong=False, isDoublePadPong=False):
         'Method to reset the ball position. '
 
         random_dir = self.rng_fixed_seed.choice([1, -1])
