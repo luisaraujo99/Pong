@@ -58,6 +58,8 @@ class PongGame:
                     X_Pad_dim=GAME_DIM_X-(PAD_SIZE-1), X_Grid_dim=GAME_DIM_X+1, Y_Grid_Dim=GAME_DIM_Y-1)
 
         # check if the path exists
+        if not os.path.isdir('./level1_results'):
+            os.mkdir('./level1_results')
         path_name = "./level1_results/X={x}Y={y}".format(
             x=GAME_DIM_X, y=GAME_DIM_Y)
         if not os.path.isdir(path_name):

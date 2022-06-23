@@ -8,11 +8,11 @@ import math
 
 GREEDY, EPS_GREEDY, STATE_LOC_GREEDY, WIND_LOC_GREEDY = 1, 2, 3, 4
 
-# default seed
-rng_fixed_seed = np.random.default_rng(2022)
-
 
 class Q_AI:
+
+    # default seed
+    rng_fixed_seed = np.random.default_rng(2022)
 
     def __init__(self, learning_rate=1, discount_rate=0.97, X_Pad_dim=None, X_Grid_dim=None, Y_Grid_Dim=None, learning_decay=None, exploration_rate=1):
         self.q_matrix = np.zeros(

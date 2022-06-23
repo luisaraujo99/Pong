@@ -1,12 +1,13 @@
 import pygame
 import numpy as np
-rng_fixed_seed = np.random.default_rng(2022)
+
 WHITE = (255, 255, 255)
 
 
 class Ball:
     MAX_VEL = 3
     COLOR = WHITE
+    rng_fixed_seed = np.random.default_rng(2022)
 
     def __init__(self, x, y, width_scale, height_scale, window_width, window_height, GAME_DIM, radius=8):
         self.x = self.original_x = x
