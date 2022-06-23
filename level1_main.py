@@ -43,7 +43,7 @@ class PongGame:
             return 'WIND_LOC_GREEDY/'
 
     def enqueue(self, rewards_queue, r):
-        if len(rewards_queue) == 1000:
+        if len(rewards_queue) == 500:
             rewards_queue.pop(0)
         rewards_queue.append(0 if r == -1 else 1)
 
@@ -229,14 +229,14 @@ def main():
     pong = PongGame(win, WIDTH, HEIGHT)
 
     for m in [4]:
-        for reseton in [8]:
-            for visits in [7]:
-                for lr in [1]:
-                    for neg in [False, True]:
+        for reseton in [15]:
+            for visits in [2]:
+                for lr in [0.9]:
+                    for neg in [False]:
                         pong.Q_learning_algorithm(
-                            epochs=600, episodes=20000, discount_rate=0.97, lr=lr,
+                            epochs=300, episodes=20000, discount_rate=0.97, lr=lr,
                             negative_propagation=neg, visits_threshold=visits,
-                            reset_on=reseton, render=False, Action_method=m, exploration_rate=1)
+                            reset_on=reseton, render=True, Action_method=m, exploration_rate=1)
 
 
 main()

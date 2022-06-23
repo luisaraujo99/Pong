@@ -6,7 +6,7 @@ import operator
 
 COOPERATION = 1
 TEAM_COOPERATION = 2
-ALL_VS_ALL = 3
+COMP = 3
 PERSONALITY_COOPERATION = 4
 
 
@@ -88,6 +88,11 @@ class DoublePadPong:
         ''' function used to create a reward to manipulate the way the paddles behave '''
         ''' paddle_reward = 1 means Paddle1 caught the ball  '''
         ''' paddle_reward = -1 means Paddle1 did not catch the ball  '''
+        if type == COMP:
+            if paddle_reward == 1 or paddle_reward == -2:
+                return (1, -1)
+            if paddle_reward == -1 or paddle_reward == 2:
+                return (-1, 1)
         if type == COOPERATION:
             if paddle_reward == 1 or paddle_reward == 2:
                 return (1, 1)

@@ -172,7 +172,7 @@ class PongGame:
                     q_ai_2.q(action_p2, r2, state_p2, new_state_p2)
                     if r1 > 0:
                         rewards_in_a_row1 += 1
-                        if rewards_in_a_row1 == 15:
+                        if rewards_in_a_row1 == reset_on:
                             self.game.ball.reset()
                             rewards_in_a_row1 = 0
                     elif r1 < 0:
@@ -182,7 +182,7 @@ class PongGame:
                         rewards1.append(np.mean(rewards_queue1))
                     if r2 > 1:
                         rewards_in_a_row2 += 1
-                        if rewards_in_a_row2 == 15:
+                        if rewards_in_a_row2 == reset_on:
                             self.game.ball.reset()
                             rewards_in_a_row2 = 0
                     elif r2 < 0:
@@ -269,7 +269,7 @@ def main():
                 for lr in [0.9]:
                     for neg in [False]:
                         pong.Q_learning_algorithm(
-                            epochs=150, episodes=20000, discount_rate=0.97, lr=lr,
+                            epochs=5, episodes=20000, discount_rate=0.97, lr=lr,
                             negative_propagation=neg, visits_threshold=visits,
                             reset_on=reseton, render=False, Action_method=m, exploration_rate=1)
 
