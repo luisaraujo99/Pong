@@ -31,7 +31,7 @@ def plot_v(matrix_range, epochs, vmax, vmin, vmid, softmax, rewards, exploration
     axs[1].legend(["max", "min"], fontsize=7)
     # rewards, explor. rate, l rate
     axs[2].set_title(
-        "Rewards ratio per epoch and exploration rate", fontdict={'fontsize': 8})
+        "states visited ratio and exploration rate", fontdict={'fontsize': 8})
     axs[2].plot(xvals, exploration_rates, linewidth=1)
     axs[2].plot(xvals, states_visited_ratio, linewidth=1)
     axs[2].legend(["explor. rate",

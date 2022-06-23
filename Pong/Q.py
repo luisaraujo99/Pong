@@ -4,10 +4,12 @@
 from os import environ
 import numpy as np
 import pickle
-import random
 import math
 
 GREEDY, EPS_GREEDY, STATE_LOC_GREEDY, WIND_LOC_GREEDY = 1, 2, 3, 4
+
+# default seed
+rng_fixed_seed = np.random.default_rng(2022)
 
 
 class Q_AI:
@@ -55,16 +57,16 @@ class Q_AI:
         return np.argmax(self.q_matrix[state])
 
     def epsilon_greedy(self, state):
-        r = random.random()
+        r = rng_fixed_seed.random()
         if r < self.exploration_rate:
-            return random.choice([0, 1, 2])
+            return rng_fixed_seed.choice([0, 1, 2])
         else:
             return np.argmax(self.q_matrix[state])
 
     def state_local_epsilon_greedy(self, state, exploit_threshold=3):
 
         if self.q_matrix_counter[state] < exploit_threshold:
-            return random.choice([0, 1, 2])
+            return rng_fixed_seed.choice([0, 1, 2])
         else:
             return np.argmax(self.q_matrix[state])
 
@@ -77,10 +79,10 @@ class Q_AI:
         x_max = X if x+radius+1 > X else x+radius+1
         return self.q_matrix_counter[x_pad, y_min:y_max, x_min:x_max]
 
-    def radius_local_epsilon_greedy(self, state, exploit_threshold=3, radius=1):
+    def radius_local_epsilon_greedy(self, state, exploit_threshold=3, radius=2):
 
         if np.mean(self.neighbors(state, radius)) < exploit_threshold:
-            return random.choice([0, 1, 2])
+            return rng_fixed_seed.choice([0, 1, 2])
         else:
             return np.argmax(self.q_matrix[state])
 
@@ -98,7 +100,7 @@ class Q_AI:
     # B decides the slope of transition region between Exploration to Exploitation zone
     # C controls the steepness of left and right tail of the graph
 
-    def exploration_rate_decay(self, time, EPISODES, A=0.4, B=0.5, C=0.1):
+    def exploration_rate_decay(self, time, EPISODES, A=0.5, B=0.1, C=0.1):
         standardized_time = (time-A*EPISODES)/(B*EPISODES)
         cosh = np.cosh(math.exp(-standardized_time))
         expr = 1.3-(1/cosh+(time*C/EPISODES))

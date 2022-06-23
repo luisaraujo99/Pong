@@ -1,12 +1,11 @@
 import pygame
 import numpy as np
-import random
-
+rng_fixed_seed = np.random.default_rng(2022)
 WHITE = (255, 255, 255)
 
 
 class Ball:
-    MAX_VEL = 5
+    MAX_VEL = 3
     COLOR = WHITE
 
     def __init__(self, x, y, width_scale, height_scale, window_width, window_height, GAME_DIM, radius=8):
@@ -34,20 +33,21 @@ class Ball:
     def reset(self, isFourPadPong=False):
         'Method to reset the ball position. '
 
-        random_dir = random.choice([1, -1])
+        random_dir = rng_fixed_seed.choice([1, -1])
 
         if (not isFourPadPong):
-            random_x_deviation = random.choice(self.deviation_possibilities)
+            random_x_deviation = rng_fixed_seed.choice(
+                self.deviation_possibilities)
             # choose the direction to be vertical with 30% probability
-            null_vel = np.random.choice([0, 1], p=[0.7, 0.3])
+            null_vel = rng_fixed_seed.choice([0, 1], p=[0.7, 0.3])
             self.x = self.original_x+random_x_deviation*self.original_x_vel
             self.y = self.original_y
             self.x_vel = (1-null_vel)*self.original_x_vel*random_dir
             self.y_vel = self.original_y_vel
 
         else:
-            up_or_down = random.choice([1, -1])
-            null_vel = random.choice([0, 1])
+            up_or_down = rng_fixed_seed.choice([1, -1])
+            null_vel = rng_fixed_seed.choice([0, 1])
             self.x = self.original_x
             self.y = self.original_y
             self.x_vel = null_vel*self.original_x_vel*random_dir

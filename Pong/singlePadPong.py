@@ -49,13 +49,16 @@ class SinglePadPong:
             if x_vel == 0:
                 x_vel = self.ball.original_x_vel
             x_vel = abs(x_vel)*(int(ball_distance_paddle_x))
+            y_vel = -y_vel*(int(ball_distance_paddle_x))
         if ball_distance_paddle_x > 0:
             if x_vel == 0:
                 x_vel = self.ball.original_x_vel
             x_vel = abs(x_vel)*(int(ball_distance_paddle_x))
+            y_vel = y_vel*(int(ball_distance_paddle_x))
         if ball_distance_paddle_x == 0:
             x_vel = 0
             y_vel *= 2
+        # check if speed is not bigger then max
         if abs(x_vel) / self.width_scale > self.ball.MAX_VEL:
             x_vel = - self.ball.MAX_VEL * \
                 self.width_scale if x_vel < 0 else self.ball.MAX_VEL * self.width_scale

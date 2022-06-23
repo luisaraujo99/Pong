@@ -10,11 +10,12 @@ from alive_progress import alive_bar
 from itertools import count
 import os
 
-WIDTH_SCALE, HEIGHT_SCALE = 20, 20
+WIDTH_SCALE, HEIGHT_SCALE = 10, 10
 GAME_DIM_X, GAME_DIM_Y = 40, 40
 PAD_SIZE = 8
 WIDTH, HEIGHT = GAME_DIM_X*WIDTH_SCALE, GAME_DIM_Y*HEIGHT_SCALE
 GREEDY, EPS_GREEDY, STATE_LOC_GREEDY, WIND_LOC_GREEDY = 1, 2, 3, 4
+
 
 plt.style.use('fivethirtyeight')
 plt.rc('xtick', labelsize=7)
@@ -42,8 +43,8 @@ class PongGame:
             return 'WIND_LOC_GREEDY/'
 
     def enqueue(self, rewards_queue, r):
-        # if len(rewards_queue) == 30:
-        #    rewards_queue.pop(0)
+        if len(rewards_queue) == 1000:
+            rewards_queue.pop(0)
         rewards_queue.append(0 if r == -1 else 1)
 
     def Q_learning_algorithm(self, epochs=200, episodes=5000, show_v_plot=True, render=True,
@@ -144,6 +145,8 @@ class PongGame:
                         if rewards_in_a_row == reset_on:
                             self.game.ball.reset()
                             rewards_in_a_row = 0
+                    elif r == -1:
+                        rewards_in_a_row = 0
                     #################### SAVE TRAINING DATA ####################
                     v_max[episode] = q_ai.v(state)
                     v_min[episode] = q_ai.v_min(state)
@@ -151,7 +154,7 @@ class PongGame:
                     q_ai.q_state_counter(state=state)
                     ############################################################
                     #######----- EXPLORATION RATE -----#######
-                    # q_ai.exploration_rate_decay(time, episodes*epochs)
+                    #q_ai.exploration_rate_decay(time, episodes*epochs)
                     q_ai.set_exploration_rate_decay(
                         (q_ai.q_matrix_counter < visits_threshold).sum()/q_ai.q_matrix_counter.size)
 
@@ -224,12 +227,14 @@ def main():
     pong = PongGame(win, WIDTH, HEIGHT)
 
     for m in [4]:
-        for rt in [100]:
-            for vt in [20]:
-                pong.Q_learning_algorithm(
-                    epochs=20, episodes=50000, discount_rate=0.97,
-                    negative_propagation=False, visits_threshold=vt,
-                    reset_on=rt, render=False, Action_method=m)
+        for reseton in [8]:
+            for visits in [7]:
+                for lr in [1]:
+                    for neg in [False, True]:
+                        pong.Q_learning_algorithm(
+                            epochs=600, episodes=20000, discount_rate=0.97, lr=lr,
+                            negative_propagation=neg, visits_threshold=visits,
+                            reset_on=reseton, render=False, Action_method=m, exploration_rate=1)
 
 
 main()
