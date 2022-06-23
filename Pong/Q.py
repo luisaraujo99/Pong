@@ -11,8 +11,7 @@ GREEDY, EPS_GREEDY, STATE_LOC_GREEDY, WIND_LOC_GREEDY = 1, 2, 3, 4
 
 class Q_AI:
 
-    # default seed
-    rng_fixed_seed = np.random.default_rng(2022)
+    
 
     def __init__(self, learning_rate=1, discount_rate=0.97, X_Pad_dim=None, X_Grid_dim=None, Y_Grid_Dim=None, learning_decay=None, exploration_rate=1):
         self.q_matrix = np.zeros(
@@ -23,6 +22,8 @@ class Q_AI:
         self.learning_decay = learning_decay
         self.q_matrix_counter = np.zeros(
             (X_Pad_dim, Y_Grid_Dim, X_Grid_dim), dtype=np.int64)
+        # default seed
+        self.rng_fixed_seed = np.random.default_rng(2022)
 
     def q(self, action, reward, state, new_state, negative_propagation=True):
         arg_max_action = np.argmax(self.q_matrix[new_state])
@@ -57,16 +58,16 @@ class Q_AI:
         return np.argmax(self.q_matrix[state])
 
     def epsilon_greedy(self, state):
-        r = rng_fixed_seed.random()
+        r = self.rng_fixed_seed.random()
         if r < self.exploration_rate:
-            return rng_fixed_seed.choice([0, 1, 2])
+            return self.rng_fixed_seed.choice([0, 1, 2])
         else:
             return np.argmax(self.q_matrix[state])
 
     def state_local_epsilon_greedy(self, state, exploit_threshold=3):
 
         if self.q_matrix_counter[state] < exploit_threshold:
-            return rng_fixed_seed.choice([0, 1, 2])
+            return self.rng_fixed_seed.choice([0, 1, 2])
         else:
             return np.argmax(self.q_matrix[state])
 
@@ -82,7 +83,7 @@ class Q_AI:
     def radius_local_epsilon_greedy(self, state, exploit_threshold=3, radius=2):
 
         if np.mean(self.neighbors(state, radius)) < exploit_threshold:
-            return rng_fixed_seed.choice([0, 1, 2])
+            return self.rng_fixed_seed.choice([0, 1, 2])
         else:
             return np.argmax(self.q_matrix[state])
 
