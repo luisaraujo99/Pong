@@ -40,7 +40,7 @@ class Ball:
             random_x_deviation = self.rng_fixed_seed.choice(
                 self.deviation_possibilities)
             # choose the direction to be vertical with 30% probability
-            null_vel = self.rng_fixed_seed.choice([0, 1], p=[0.7, 0.3])
+            null_vel = self.rng_fixed_seed.choice([0, 1])
             self.x = self.original_x+random_x_deviation*self.original_x_vel
             self.y = self.original_y
             self.x_vel = (1-null_vel)*self.original_x_vel*random_dir

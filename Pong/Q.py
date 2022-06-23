@@ -11,9 +11,10 @@ GREEDY, EPS_GREEDY, STATE_LOC_GREEDY, WIND_LOC_GREEDY = 1, 2, 3, 4
 
 class Q_AI:
 
-    
+    def __init__(self, learning_rate=1, discount_rate=0.97, X_Pad_dim=None, X_Grid_dim=None,
+                 Y_Grid_Dim=None, learning_decay=None, exploration_rate=1, seed=np.random.default_rng(2022)):
 
-    def __init__(self, learning_rate=1, discount_rate=0.97, X_Pad_dim=None, X_Grid_dim=None, Y_Grid_Dim=None, learning_decay=None, exploration_rate=1):
+        # instance vars
         self.q_matrix = np.zeros(
             (X_Pad_dim, Y_Grid_Dim, X_Grid_dim, 3))
         self.learning_rate = learning_rate
@@ -23,7 +24,7 @@ class Q_AI:
         self.q_matrix_counter = np.zeros(
             (X_Pad_dim, Y_Grid_Dim, X_Grid_dim), dtype=np.int64)
         # default seed
-        self.rng_fixed_seed = np.random.default_rng(2022)
+        self.rng_fixed_seed = seed
 
     def q(self, action, reward, state, new_state, negative_propagation=True):
         arg_max_action = np.argmax(self.q_matrix[new_state])
@@ -149,7 +150,6 @@ class Q_AI:
             file.close()
         except IOError:
             print("Could not read file")
-            self.q_state_counter()
 
     def q_state_counter(self, state=None):
         if state != None:
