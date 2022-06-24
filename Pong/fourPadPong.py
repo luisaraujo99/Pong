@@ -3,17 +3,12 @@ from .paddle import Paddle
 from .ball import Ball
 import pygame
 import operator
-
+import numpy as np
 
 COOPERATION = 1
 TEAM_COOPERATION = 2
 ALL_VS_ALL = 3
 PERSONALITY_COOPERATION = 4
-
-
-class GameInformation:
-    def __init__(self, score):
-        self.score = score
 
 
 class FourPadPong:
@@ -126,24 +121,24 @@ class FourPadPong:
         ''' paddle_reward = -1 means Paddle1 did not catch the ball  '''
         if type == COOPERATION:
             if paddle_reward == 1 or paddle_reward == 2 or paddle_reward == 3 or paddle_reward == 4:
-                return (1, 1, 1, 1)
+                return (1, 1, 1, 1, paddle_reward)
             if paddle_reward == -3 or paddle_reward == -4 or paddle_reward == -1 or paddle_reward == -2:
-                return (-1, -1, -1, -1)
+                return (-1, -1, -1, -1, paddle_reward)
         if type == TEAM_COOPERATION:
             if paddle_reward == 1 or paddle_reward == 2 or paddle_reward == -3 or paddle_reward == -4:
-                return (1, 1, -1, -1)
+                return (1, 1, -1, -1, paddle_reward)
             if paddle_reward == 3 or paddle_reward == 4 or paddle_reward == -1 or paddle_reward == -2:
-                return (-1, -1, 1, 1)
+                return (-1, -1, 1, 1, paddle_reward)
         if type == PERSONALITY_COOPERATION:
             if paddle_reward == 1 or paddle_reward == 2 or paddle_reward == -3 or paddle_reward == -4:
-                return (10, 10, -1, -1)
+                return (10, 10, -1, -1, paddle_reward)
             if paddle_reward == 3 or paddle_reward == 4 or paddle_reward == -1 or paddle_reward == -2:
-                return (-10, -10, 1, 1)
+                return (-10, -10, 1, 1, paddle_reward)
 
     def handle_collision(self):
         ''' function to handle the ball collision with the whole environment '''
         (ball_x, ball_y) = self.ball.move()
-        reward = (0, 0, 0, 0)
+        reward = (0, 0, 0, 0, 0)
 
         # LEFT PAD 3 LINE
         if ball_x < self.paddle3.x+self.paddle3.width:
@@ -263,12 +258,11 @@ class FourPadPong:
         # self.drawGrid()
 
     def loop(self):
+        reward = self.handle_collision()
         self.score = tuple(
-            map(operator.add, self.score, self.handle_collision()))
+            map(operator.add, self.score, np.sign(reward[:-1])))
 
-        game_info = GameInformation(self.score)
-
-        return game_info
+        return reward
 
     def reset(self):
         """Resets the entire game."""

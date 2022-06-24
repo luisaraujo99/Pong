@@ -1,3 +1,4 @@
+from re import T
 import matplotlib.pyplot as plt
 import numpy as np
 from Pong import DoublePadPong
@@ -13,12 +14,12 @@ plt.rc('xtick', labelsize=7)
 plt.rc('ytick', labelsize=7)
 
 
-WIDTH_SCALE, HEIGHT_SCALE = 2, 2
-GAME_DIM_X, GAME_DIM_Y = 40, 50
+WIDTH_SCALE, HEIGHT_SCALE = 20, 20
+GAME_DIM_X, GAME_DIM_Y = 20, 35
 PAD_SIZE = 6
 WIDTH, HEIGHT = GAME_DIM_X*WIDTH_SCALE, GAME_DIM_Y*HEIGHT_SCALE
 X_PAD_DIM = GAME_DIM_X-(PAD_SIZE-1)
-EPS_GREEDY, GREEDY, STATE_LOC_GREEDY, WIND_LOC_GREEDY = 1, 2, 3, 4
+GREEDY, EPS_GREEDY, STATE_LOC_GREEDY, WIND_LOC_GREEDY = 1, 2, 3, 4
 
 
 class PongGame:
@@ -111,24 +112,24 @@ class PongGame:
         rewards_queue1, rewards_queue2 = [], []
 
         # variables
-        time, epoch, rewards_in_a_row1, rewards_in_a_row2 = 0, 0, 0, 0
+        time, epoch, rewards_in_a_row, rewards_in_a_row = 0, 0, 0, 0
         with alive_bar(epochs, bar='blocks', title=f'Trainig evolution', spinner='arrows') as bar:
             while epoch < epochs:
 
                 episode = 0
-                game_info = self.game.loop()
+                self.game.loop()
 
                 v_max1, v_max2, v_mid1, v_mid2, v_min1, v_min2 = np.zeros(
                     episodes), np.zeros(episodes), np.zeros(episodes), np.zeros(episodes), np.zeros(episodes), np.zeros(episodes)
 
                 while episode < episodes and run:
                     if render:
-                        clock.tick(20)
+                        clock.tick(300)
                         for event in pygame.event.get():
                             if event.type == pygame.QUIT:
                                 run = False
                                 break
-                    init_score = game_info.score
+
                     state_p1 = ((self.paddle1.x//WIDTH_SCALE), (self.ball.y //
                                                                 HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
                     state_p2 = ((self.paddle2.x//WIDTH_SCALE), (self.ball.y //
@@ -161,32 +162,30 @@ class PongGame:
                     if render:
                         self.game.draw()
                         pygame.display.update()
-                    game_info = self.game.loop()
-                    end_score = self.game.score
-                    r1, r2 = self.reward(init_score, end_score)
+                    r1, r2, winner = self.game.loop()
                     new_state_p1 = ((self.paddle1.x//WIDTH_SCALE), (self.ball.y //
                                                                     HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
                     new_state_p2 = ((self.paddle1.x//WIDTH_SCALE), (self.ball.y //
                                                                     HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
                     q_ai_1.q(action_p1, r1, state_p1, new_state_p1)
                     q_ai_2.q(action_p2, r2, state_p2, new_state_p2)
-                    if r1 > 0:
-                        rewards_in_a_row1 += 1
-                        if rewards_in_a_row1 == reset_on:
+                    if r1 > 0 and winner == 1:
+                        rewards_in_a_row += 1
+                        if rewards_in_a_row == reset_on:
                             self.game.ball.reset()
-                            rewards_in_a_row1 = 0
-                    elif r1 < 0:
-                        rewards_in_a_row1 = 0
+                            rewards_in_a_row = 0
+                    elif r1 < 0 and winner == -1:
+                        rewards_in_a_row = 0
                     if abs(r1) > 0:
                         self.enqueue(rewards_queue1, r1)
                         rewards1.append(np.mean(rewards_queue1))
-                    if r2 > 1:
-                        rewards_in_a_row2 += 1
-                        if rewards_in_a_row2 == reset_on:
+                    if r2 > 1 and winner == 2:
+                        rewards_in_a_row += 1
+                        if rewards_in_a_row == reset_on:
                             self.game.ball.reset()
-                            rewards_in_a_row2 = 0
-                    elif r2 < 0:
-                        rewards_in_a_row2 = 0
+                            rewards_in_a_row = 0
+                    elif r2 < 0 and winner == -2:
+                        rewards_in_a_row = 0
                     if abs(r2) > 0:
                         self.enqueue(rewards_queue2, r2)
                         rewards2.append(np.mean(rewards_queue2))
@@ -263,13 +262,13 @@ def main():
     pygame.display.set_caption("Double Pad Pong")
     pong = PongGame(win, WIDTH, HEIGHT)
 
-    for m in [(4, 4)]:
-        for reseton in [8]:
-            for visits in [8]:
+    for m in [(GREEDY, GREEDY)]:
+        for reseton in [10]:
+            for visits in [12]:
                 for lr in [1]:
                     for neg in [False]:
                         pong.Q_learning_algorithm(
-                            epochs=400, episodes=20000, discount_rate=0.97, lr=lr,
+                            epochs=100, episodes=20000, discount_rate=0.97, lr=lr,
                             negative_propagation=neg, visits_threshold=visits,
                             reset_on=reseton, render=True, Action_method=m, exploration_rate=1)
 

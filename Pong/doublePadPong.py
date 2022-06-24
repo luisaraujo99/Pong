@@ -2,17 +2,12 @@ from .paddle import Paddle
 from .ball import Ball
 import pygame
 import operator
-
+import numpy as np
 
 COOPERATION = 1
 TEAM_COOPERATION = 2
 COMP = 3
 PERSONALITY_COOPERATION = 4
-
-
-class GameInformation:
-    def __init__(self, score):
-        self.score = score
 
 
 class DoublePadPong:
@@ -45,8 +40,8 @@ class DoublePadPong:
     def draw_score(self):
         score_text1 = self.SCORE_FONT.render(f"{self.score[0]}", 1, self.CYAN)
         score_text2 = self.SCORE_FONT.render(f"{self.score[1]}", 1, self.CYAN)
-        self.window.blit(score_text1, (15, 20))
-        self.window.blit(score_text2, (15, self.window_height-50))
+        self.window.blit(score_text1, (15, 60))
+        self.window.blit(score_text2, (15, self.window_height-90))
 
     def handle_ball_paddle_collision(self, ball_x, paddle_number):
 
@@ -90,23 +85,23 @@ class DoublePadPong:
         ''' paddle_reward = -1 means Paddle1 did not catch the ball  '''
         if type == COMP:
             if paddle_reward == 1 or paddle_reward == -2:
-                return (1, -1)
+                return (1, -1, paddle_reward)
             if paddle_reward == -1 or paddle_reward == 2:
-                return (-1, 1)
+                return (-1, 1, paddle_reward)
         if type == COOPERATION:
             if paddle_reward == 1 or paddle_reward == 2:
-                return (1, 1)
+                return (1, 1, paddle_reward)
             if paddle_reward == -1 or paddle_reward == -2:
-                return (-1, -1)
+                return (-1, -1, paddle_reward)
         if type == PERSONALITY_COOPERATION:
             if paddle_reward == 1 or paddle_reward == 2:
-                return (1, 1)
+                return (1, 1, paddle_reward)
             if paddle_reward == -1 or paddle_reward == -2:
-                return (-10, -10)
+                return (-10, -10, paddle_reward)
 
     def handle_collision(self):
         (ball_x, ball_y) = self.ball.move()
-        reward = (0, 0)
+        reward = (0, 0, 0)
 
         ####################################################################
         ########################### TOP   PAD ##############################
@@ -280,12 +275,11 @@ class DoublePadPong:
         # self.drawGrid()
 
     def loop(self):
+        reward = self.handle_collision()
         self.score = tuple(
-            map(operator.add, self.score, self.handle_collision()))
+            map(operator.add, self.score, np.sign(reward[:-1])))
 
-        game_info = GameInformation(self.score)
-
-        return game_info
+        return reward
 
     def reset(self):
         """Resets the entire game."""

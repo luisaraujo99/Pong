@@ -7,16 +7,18 @@ import pygame
 from alive_progress import alive_bar
 import operator
 import os
+import multiprocessing
 plt.rc('xtick', labelsize=7)
 plt.rc('ytick', labelsize=7)
 
 
 WIDTH_SCALE, HEIGHT_SCALE = 10, 10
-GAME_DIM_X, GAME_DIM_Y = 60, 60
-PAD_SIZE = 12
+GAME_DIM_X, GAME_DIM_Y = 50, 50
+PAD_SIZE = 8
 WIDTH, HEIGHT = GAME_DIM_X*WIDTH_SCALE, GAME_DIM_Y*HEIGHT_SCALE
 X_PAD_DIM = GAME_DIM_X-(PAD_SIZE-1)
 EPS_GREEDY, GREEDY, STATE_LOC_GREEDY, WIND_LOC_GREEDY = 1, 2, 3, 4
+NUM_PROC = 4
 
 
 class PongGame:
@@ -59,7 +61,7 @@ class PongGame:
 
     def enqueue(self, rewards_queue, r):
         """ Function to help creating a sliding window to save game status"""
-        if len(rewards_queue) == 50:
+        if len(rewards_queue) == 500:
             rewards_queue.pop(0)
         rewards_queue.append(0 if r == -1 else 1)
 
@@ -87,6 +89,8 @@ class PongGame:
 
         clock = pygame.time.Clock()
         run = True
+
+        jobs = []
 
         ###### Declaring Q_AI Instances ######
         q_ai_1 = Q_AI(learning_rate=lr, discount_rate=0.97, X_Pad_dim=GAME_DIM_X -
@@ -139,20 +143,18 @@ class PongGame:
         # variables
         time, epoch = 0, 0
         rewards_in_a_row1, rewards_in_a_row2, rewards_in_a_row3, rewards_in_a_row4 = 0, 0, 0, 0
+        with alive_bar(epochs, bar='blocks', title=f'Trainig evolution', spinner='arrows') as bar:
+            while epoch < epochs:
 
-        while epoch < epochs:
+                episode = 0
+                self.game.loop()
 
-            episode = 0
-            game_info = self.game.loop()
+                v_max1, v_max2, v_mid1, v_mid2, v_min1, v_min2 = self.init_np_arrays(
+                    episodes, 6)
+                v_max3, v_max4, v_mid3, v_mid4, v_min3, v_min4 = self.init_np_arrays(
+                    episodes, 6)
 
-            v_max1, v_max2, v_mid1, v_mid2, v_min1, v_min2 = self.init_np_arrays(
-                episodes, 6)
-            v_max3, v_max4, v_mid3, v_mid4, v_min3, v_min4 = self.init_np_arrays(
-                episodes, 6)
-
-            with alive_bar(episodes, bar='blocks', title=f'Epoch {epoch}', spinner='arrows') as bar:
                 while episode < episodes and run:
-
                     if render:
                         clock.tick(20)
                         for event in pygame.event.get():
@@ -160,10 +162,9 @@ class PongGame:
                                 run = False
                                 break
 
-                    init_score = game_info.score
-
                     state_p1, state_p2, state_p3, state_p4 = self.return_states()
 
+                    # let each AI choose an action
                     action_p1 = q_ai_1.action_chooser_method(
                         state_p1, Action_method[0], visits_threshold)
                     action_p2 = q_ai_2.action_chooser_method(
@@ -183,7 +184,6 @@ class PongGame:
                     elif action_p1 == 1:
                         self.game.paddle1.move(
                             False, False, window_width=WIDTH, window_height=HEIGHT)
-
                     ################# PAD 2 ##################
                     # right
                     if action_p2 == 2:
@@ -193,7 +193,6 @@ class PongGame:
                     elif action_p2 == 1:
                         self.game.paddle2.move(
                             True, False, window_width=WIDTH, window_height=HEIGHT)
-
                     ################# PAD 3 ##################
                     # right
                     if action_p3 == 2:
@@ -203,7 +202,6 @@ class PongGame:
                     elif action_p3 == 1:
                         self.game.paddle3.move(
                             True, False, window_width=WIDTH, window_height=HEIGHT)
-
                     ################# PAD 4 ##################
                     # right
                     if action_p4 == 2:
@@ -215,67 +213,64 @@ class PongGame:
                             True, False, window_width=WIDTH, window_height=HEIGHT)
                     ##########################################
                     ##########################################
-
                     if render:
                         self.game.draw()
                         pygame.display.update()
 
-                    game_info = self.game.loop()
-
                     ############################################################
                     ######################## REWARD HANDLING ###################
-                    end_score = self.game.score
+                    ############################################################
 
-                    r1, r2, r3, r4 = self.reward(init_score, end_score)
-
+                    r1, r2, r3, r4, winner = self.game.loop()
                     new_state_p1, new_state_p2, new_state_p3, new_state_p4 = self.return_states()
-
                     q_ai_1.q(action_p1, r1, state_p1, new_state_p1)
                     q_ai_2.q(action_p2, r2, state_p2, new_state_p2)
                     q_ai_3.q(action_p3, r3, state_p3, new_state_p3)
                     q_ai_4.q(action_p4, r4, state_p4, new_state_p4)
-
                     # pad 1
-                    if r1 >= 1:
+                    if r1 > 0 and winner == 1:
                         rewards_in_a_row1 += 1
-                        if rewards_in_a_row1 == 15:
+                        if rewards_in_a_row1 == reset_on:
                             self.game.ball.reset()
                             rewards_in_a_row1 = 0
-
+                    elif r1 < 0 and winner == -1:
+                        rewards_in_a_row1 = 0
                     if abs(r1) == 1:
                         self.enqueue(rewards_queue1, r1)
                         rewards1.append(np.mean(rewards_queue1))
                     # pad 2
-                    if r2 >= 1:
+                    if r2 > 0 and winner == 2:
                         rewards_in_a_row2 += 1
-                        if rewards_in_a_row2 == 15:
+                        if rewards_in_a_row2 == reset_on:
                             self.game.ball.reset()
                             rewards_in_a_row2 = 0
-
+                    elif r2 < 0 and winner == -2:
+                        rewards_in_a_row2 = 0
                     if abs(r2) == 1:
                         self.enqueue(rewards_queue2, r2)
                         rewards3.append(np.mean(rewards_queue2))
                     # pad 3
-                    if r3 >= 1:
+                    if r3 > 0 and winner == 3:
                         rewards_in_a_row3 += 1
-                        if rewards_in_a_row3 == 15:
+                        if rewards_in_a_row3 == reset_on:
                             self.game.ball.reset()
                             rewards_in_a_row3 = 0
-
+                    elif r3 < 0 and winner == -3:
+                        rewards_in_a_row3 = 0
                     if abs(r3) == 1:
                         self.enqueue(rewards_queue3, r3)
                         rewards3.append(np.mean(rewards_queue3))
                     # pad 4
-                    if r4 >= 1:
+                    if r4 > 0 and winner == 4:
                         rewards_in_a_row4 += 1
-                        if rewards_in_a_row4 == 15:
+                        if rewards_in_a_row4 == reset_on:
                             self.game.ball.reset()
                             rewards_in_a_row4 = 0
-
+                    elif r4 < 0 and winner == -4:
+                        rewards_in_a_row4 = 0
                     if abs(r4) == 1:
                         self.enqueue(rewards_queue4, r4)
                         rewards4.append(np.mean(rewards_queue4))
-
                     ############################################################
                     #################### SAVE TRAINING DATA ####################
                     # pad1
@@ -299,83 +294,72 @@ class PongGame:
                     v_mid4[episode] = q_ai_4.v_mid(state_p4)
                     q_ai_4.q_state_counter(state=state_p4)
                     # ############################################################
-
                     #######----- EXPLORATION RATE -----#######
                     # q_ai_1.exploration_rate_decay(time, episodes*epochs)
                     # q_ai_2.exploration_rate_decay(time, episodes*epochs)
                     q_ai_1.set_exploration_rate_decay(
                         ((q_ai_1.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]) < visits_threshold).sum()/(q_ai_1.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]).size)
-
                     q_ai_2.set_exploration_rate_decay(
                         ((q_ai_2.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]) < visits_threshold).sum()/(q_ai_2.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]).size)
-
                     q_ai_3.set_exploration_rate_decay(
                         ((q_ai_3.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]) < visits_threshold).sum()/(q_ai_3.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]).size)
-
                     q_ai_4.set_exploration_rate_decay(
                         ((q_ai_4.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]) < visits_threshold).sum()/(q_ai_4.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]).size)
-
                     # iteration
                     episode += 1
                     time += 1
 
-                    # show training evolution
-                    bar.text(
-                        f'\n-> Exploration rate: {q_ai_1.exploration_rate}')
-                    bar()
+                #################### SAVE TRAINING DATA ####################
+                exploration_rates1[epoch] = q_ai_1.exploration_rate
+                v_max_mean1[epoch] = np.mean(v_max1)
+                v_min_mean1[epoch] = np.mean(v_min1)
+                v_mid_mean1[epoch] = np.mean(v_mid1)
+                maximum_rec_val1[epoch] = np.max(q_ai_1.q_matrix)
+                states_visited_ratio1[epoch] = (
+                    q_ai_1.q_matrix_counter < 1).sum()/q_ai_1.q_matrix_counter.size
+                learning_rate_evol1[epoch] = q_ai_1.learning_rate
+                # pad 2 stats
+                v_max_mean2[epoch] = np.mean(v_max2)
+                v_min_mean2[epoch] = np.mean(v_min2)
+                v_mid_mean2[epoch] = np.mean(v_mid2)
+                maximum_rec_val2[epoch] = np.max(q_ai_2.q_matrix)
+                states_visited_ratio2[epoch] = (
+                    q_ai_2.q_matrix_counter < 1).sum()/q_ai_2.q_matrix_counter.size
+                learning_rate_evol2[epoch] = q_ai_2.learning_rate
+                exploration_rates2[epoch] = q_ai_2.exploration_rate
+                # pad 3 stats
+                v_max_mean3[epoch] = np.mean(v_max3)
+                v_min_mean3[epoch] = np.mean(v_min3)
+                v_mid_mean3[epoch] = np.mean(v_mid3)
+                maximum_rec_val3[epoch] = np.max(q_ai_3.q_matrix)
+                states_visited_ratio3[epoch] = (
+                    q_ai_3.q_matrix_counter < 1).sum()/q_ai_3.q_matrix_counter.size
+                learning_rate_evol3[epoch] = q_ai_3.learning_rate
+                exploration_rates3[epoch] = q_ai_3.exploration_rate
+                # pad 4 stats
+                v_max_mean4[epoch] = np.mean(v_max4)
+                v_min_mean4[epoch] = np.mean(v_min4)
+                v_mid_mean4[epoch] = np.mean(v_mid4)
+                maximum_rec_val4[epoch] = np.max(q_ai_4.q_matrix)
+                states_visited_ratio4[epoch] = (
+                    q_ai_4.q_matrix_counter < 1).sum()/q_ai_4.q_matrix_counter.size
+                learning_rate_evol4[epoch] = q_ai_4.learning_rate
+                exploration_rates4[epoch] = q_ai_4.exploration_rate
+                ############################################################
 
-            #################### SAVE TRAINING DATA ####################
-            exploration_rates1[epoch] = q_ai_1.exploration_rate
-            v_max_mean1[epoch] = np.mean(v_max1)
-            v_min_mean1[epoch] = np.mean(v_min1)
-            v_mid_mean1[epoch] = np.mean(v_mid1)
-            maximum_rec_val1[epoch] = np.max(q_ai_1.q_matrix)
-            states_visited_ratio1[epoch] = (
-                q_ai_1.q_matrix_counter < 1).sum()/q_ai_1.q_matrix_counter.size
-            learning_rate_evol1[epoch] = q_ai_1.learning_rate
-            # pad 2 stats
-            v_max_mean2[epoch] = np.mean(v_max2)
-            v_min_mean2[epoch] = np.mean(v_min2)
-            v_mid_mean2[epoch] = np.mean(v_mid2)
-            maximum_rec_val2[epoch] = np.max(q_ai_2.q_matrix)
-            states_visited_ratio2[epoch] = (
-                q_ai_2.q_matrix_counter < 1).sum()/q_ai_2.q_matrix_counter.size
-            learning_rate_evol2[epoch] = q_ai_2.learning_rate
-            exploration_rates2[epoch] = q_ai_2.exploration_rate
-            # pad 3 stats
-            v_max_mean3[epoch] = np.mean(v_max3)
-            v_min_mean3[epoch] = np.mean(v_min3)
-            v_mid_mean3[epoch] = np.mean(v_mid3)
-            maximum_rec_val3[epoch] = np.max(q_ai_3.q_matrix)
-            states_visited_ratio3[epoch] = (
-                q_ai_3.q_matrix_counter < 1).sum()/q_ai_3.q_matrix_counter.size
-            learning_rate_evol3[epoch] = q_ai_3.learning_rate
-            exploration_rates3[epoch] = q_ai_3.exploration_rate
-            # pad 4 stats
-            v_max_mean4[epoch] = np.mean(v_max4)
-            v_min_mean4[epoch] = np.mean(v_min4)
-            v_mid_mean4[epoch] = np.mean(v_mid4)
-            maximum_rec_val4[epoch] = np.max(q_ai_4.q_matrix)
-            states_visited_ratio4[epoch] = (
-                q_ai_4.q_matrix_counter < 1).sum()/q_ai_4.q_matrix_counter.size
-            learning_rate_evol4[epoch] = q_ai_4.learning_rate
-            exploration_rates4[epoch] = q_ai_4.exploration_rate
-            ############################################################
+                # iteration
+                epoch += 1
 
-            # learning rate evolution
-            q_ai_1.learning_rate_decay(epoch)
-            q_ai_2.learning_rate_decay(epoch)
-            q_ai_3.learning_rate_decay(epoch)
-            q_ai_4.learning_rate_decay(epoch)
+                # save Q state
+                q_ai_1.save_state(filename=filenames[0])
+                q_ai_2.save_state(filename=filenames[1])
+                q_ai_3.save_state(filename=filenames[2])
+                q_ai_4.save_state(filename=filenames[3])
 
-            # iteration
-            epoch += 1
-
-            # save Q state
-            q_ai_1.save_state(filename=filename1)
-            q_ai_2.save_state(filename=filename2)
-            q_ai_3.save_state(filename=filename3)
-            q_ai_4.save_state(filename=filename4)
+                # show training evolution
+                bar.text(
+                    f'\n-> Exploration rate: {round(q_ai_1.exploration_rate,4)}')
+                bar()
 
         X, Y, Z, _ = q_ai_1.q_matrix.shape
         softmax1 = [q_ai_1.softmax((x, y, z)) for x in range(X)
