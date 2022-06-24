@@ -68,7 +68,6 @@ class DoublePadPong:
             y_vel = y_vel*(int(ball_distance_paddle_x))
         if ball_distance_paddle_x == 0:
             x_vel = 0
-            y_vel *= 2
         if abs(x_vel) / self.width_scale > Ball.MAX_VEL_X:
             x_vel = - Ball.MAX_VEL_X * \
                 self.width_scale if x_vel < 0 else Ball.MAX_VEL_X * self.width_scale
@@ -84,15 +83,23 @@ class DoublePadPong:
         ''' paddle_reward = 1 means Paddle1 caught the ball  '''
         ''' paddle_reward = -1 means Paddle1 did not catch the ball  '''
         if type == COMP:
-            if paddle_reward == 1 or paddle_reward == -2:
-                return (1, -1, paddle_reward)
-            if paddle_reward == -1 or paddle_reward == 2:
-                return (-1, 1, paddle_reward)
+            if paddle_reward == 1:
+                return (1, 0, paddle_reward)
+            if paddle_reward == 2:
+                return (0, 1, paddle_reward)
+            if paddle_reward == -1:
+                return (-1, 10, paddle_reward)
+            if paddle_reward == -2:
+                return (10, -1, paddle_reward)
         if type == COOPERATION:
-            if paddle_reward == 1 or paddle_reward == 2:
-                return (1, 1, paddle_reward)
-            if paddle_reward == -1 or paddle_reward == -2:
-                return (-1, -1, paddle_reward)
+            if paddle_reward == 1:
+                return (10, 1, paddle_reward)
+            if paddle_reward == 2:
+                return (1, 10, paddle_reward)
+            if paddle_reward == -1:
+                return (-10, -1, paddle_reward)
+            if paddle_reward == -2:
+                return (-1, -10, paddle_reward)
         if type == PERSONALITY_COOPERATION:
             if paddle_reward == 1 or paddle_reward == 2:
                 return (1, 1, paddle_reward)

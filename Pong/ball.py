@@ -5,8 +5,8 @@ WHITE = (255, 255, 255)
 
 
 class Ball:
-    MAX_VEL_X = 2
-    MAX_VEL_Y = 2
+    MAX_VEL_X = 1
+    MAX_VEL_Y = 1
     COLOR = WHITE
 
     def __init__(self, x, y, width_scale, height_scale, window_width, window_height, GAME_DIM, radius=8):

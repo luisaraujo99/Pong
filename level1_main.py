@@ -106,7 +106,7 @@ class PongGame:
 
                 while episode < episodes and run:
                     if render:
-                        clock.tick(15)
+                        clock.tick(45)
                         for event in pygame.event.get():
                             if event.type == pygame.QUIT:
                                 run = False
@@ -229,9 +229,9 @@ def main():
     pong = PongGame(win, WIDTH, HEIGHT)
 
     for m in [4]:
-        for reseton in [15]:
-            for visits in [2]:
-                for lr in [0.9]:
+        for reseton in [8]:
+            for visits in [6]:
+                for lr in [1]:
                     for neg in [False]:
                         pong.Q_learning_algorithm(
                             epochs=300, episodes=20000, discount_rate=0.97, lr=lr,

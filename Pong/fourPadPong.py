@@ -55,7 +55,7 @@ class FourPadPong:
         self.window.blit(
             score_text4, (self.window_width-50, self.window_height-50))
 
-    def handle_ball_paddle_collision(self, ball_x=None, ball_y=None, paddle_number=1):
+    def handle_ball_paddle_collision(self, ball_x=None, ball_y=None, paddle_number=2):
         ''' function to handle ball speed and direction change when touches a paddle '''
         if paddle_number == 1:
             x_paddle_center = self.paddle1.x + self.paddle1.width//2
@@ -83,26 +83,28 @@ class FourPadPong:
                 if x_vel == 0:
                     x_vel = self.ball.original_x_vel
                 x_vel = abs(x_vel)*(int(ball_distance_paddle_x))
+                y_vel = -y_vel*(int(ball_distance_paddle_x))
             if ball_distance_paddle_x > 0:
                 if x_vel == 0:
                     x_vel = self.ball.original_x_vel
                 x_vel = abs(x_vel)*(int(ball_distance_paddle_x))
+                y_vel = y_vel*(int(ball_distance_paddle_x))
             if ball_distance_paddle_x == 0:
                 x_vel = 0
-                y_vel *= 2
         # code for pad 3 and 4
         if paddle_number >= 3:
             if ball_distance_paddle_y < 0:
                 if y_vel == 0:
                     y_vel = self.ball.original_y_vel
                 y_vel = abs(y_vel)*(int(ball_distance_paddle_y))
+                x_vel = -x_vel*(int(ball_distance_paddle_y))
             if ball_distance_paddle_y > 0:
                 if y_vel == 0:
                     y_vel = self.ball.original_y_vel
                 y_vel = abs(y_vel)*(int(ball_distance_paddle_y))
+                x_vel = x_vel*(int(ball_distance_paddle_y))
             if ball_distance_paddle_y == 0:
                 y_vel = 0
-                x_vel *= 2
 
         # speed constraints
         if abs(x_vel) // self.width_scale > Ball.MAX_VEL_X:
@@ -181,7 +183,7 @@ class FourPadPong:
             ball_y = self.paddle2.y
             if ball_x >= self.paddle2.x and ball_x <= self.paddle2.x+self.paddle2.width:
                 self.ball.y_vel *= -1
-                self.handle_ball_paddle_collision(ball_x, 2)
+                self.handle_ball_paddle_collision(ball_x, paddle_number=2)
                 ball_x = ball_x+(1-lambda_y)*self.ball.x_vel
                 ball_y = self.paddle2.y + (1-lambda_y)*self.ball.y_vel
                 reward = self.reward_type(2)
@@ -198,7 +200,7 @@ class FourPadPong:
             ball_y = self.paddle1.y+self.paddle1.height
             if ball_x >= self.paddle1.x and ball_x <= self.paddle1.x+self.paddle1.width:
                 self.ball.y_vel *= -1
-                self.handle_ball_paddle_collision(ball_x, 1)
+                self.handle_ball_paddle_collision(ball_x, paddle_number=1)
                 ball_x = ball_x+(1-lambda_y)*self.ball.x_vel
                 ball_y = ball_y + (1-lambda_y)*self.ball.y_vel
                 reward = self.reward_type(1)
