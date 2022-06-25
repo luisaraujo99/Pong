@@ -228,9 +228,9 @@ def main():
     pygame.display.set_caption("Single Pad Pong")
     pong = PongGame(win, WIDTH, HEIGHT)
 
-    for m in [4]:
+    for m in [WIND_LOC_GREEDY]:
         for reseton in [8]:
-            for visits in [6]:
+            for visits in [4, 8, 10]:
                 for lr in [1]:
                     for neg in [False]:
                         pong.Q_learning_algorithm(

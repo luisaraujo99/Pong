@@ -124,7 +124,7 @@ class PongGame:
 
                 while episode < episodes and run:
                     if render:
-                        clock.tick(20)
+                        clock.tick(100)
                         for event in pygame.event.get():
                             if event.type == pygame.QUIT:
                                 run = False
@@ -138,8 +138,10 @@ class PongGame:
                         state_p1, Action_method[0], visits_threshold)
                     action_p2 = q_ai_2.action_chooser_method(
                         state_p2, Action_method[1], visits_threshold)
+
                     ##########################################
                     ################# PAD 1 ##################
+                    ##########################################
                     # right
                     if action_p1 == 2:
                         self.game.paddle1.move(
@@ -159,6 +161,7 @@ class PongGame:
                             False, False, window_width=WIDTH)
                     ##########################################
                     ##########################################
+
                     if render:
                         self.game.draw()
                         pygame.display.update()
@@ -260,14 +263,14 @@ def main():
     pong = PongGame(win, WIDTH, HEIGHT)
 
     for m in [(4, 4)]:
-        for reseton in [10]:
+        for reseton in [5]:
             for visits in [10]:
                 for lr in [1]:
                     for neg in [False]:
                         pong.Q_learning_algorithm(
                             epochs=600, episodes=20000, discount_rate=0.97, lr=lr,
                             negative_propagation=neg, visits_threshold=visits,
-                            reset_on=reseton, render=False, Action_method=m, exploration_rate=1)
+                            reset_on=reseton, render=True, Action_method=m, exploration_rate=1)
 
 
 main()

@@ -115,7 +115,7 @@ class DoublePadPong:
         ####################################################################
 
         # TOP LEFT (PAD)
-        if ball_x < 0 and ball_y > self.paddle1.y and self.paddle1.x == 0:
+        if ball_x < 0 and ball_y < self.paddle1.y and self.paddle1.x == 0:
             lambda_x = (-self.ball.x)/self.ball.x_vel
             lambda_y = (self.ball.y-(self.paddle1.y +
                         self.paddle1.height))/self.ball.y_vel
@@ -283,9 +283,13 @@ class DoublePadPong:
 
     def loop(self):
         reward = self.handle_collision()
-        self.score = tuple(
-            map(operator.add, self.score, np.sign(reward[:-1])))
-
+        # competetive
+        if reward[0] < 0:
+            self.score = tuple(
+                map(operator.add, self.score, (0, 1)))
+        elif reward[1] < 0:
+            self.score = tuple(
+                map(operator.add, self.score, (1, 0)))
         return reward
 
     def reset(self):
