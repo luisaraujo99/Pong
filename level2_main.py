@@ -1,3 +1,4 @@
+from Pong.doublePadPong import DoublePadPong
 from re import T
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,15 +9,14 @@ import pygame
 from alive_progress import alive_bar
 import operator
 import os
-
-from Pong.doublePadPong import DoublePadPong
+os.environ['SDL_VIDEODRIVER'] = 'dummy'
 plt.rc('xtick', labelsize=7)
 plt.rc('ytick', labelsize=7)
 
 
-WIDTH_SCALE, HEIGHT_SCALE = 10, 10
-GAME_DIM_X, GAME_DIM_Y = 28, 36
-PAD_SIZE = 10
+WIDTH_SCALE, HEIGHT_SCALE = 20, 20
+GAME_DIM_X, GAME_DIM_Y = 30, 40
+PAD_SIZE = 8
 WIDTH, HEIGHT = GAME_DIM_X*WIDTH_SCALE, GAME_DIM_Y*HEIGHT_SCALE
 X_PAD_DIM = GAME_DIM_X-(PAD_SIZE-1)
 GREEDY, EPS_GREEDY, STATE_LOC_GREEDY, WIND_LOC_GREEDY = 1, 2, 3, 4
@@ -124,7 +124,7 @@ class PongGame:
 
                 while episode < episodes and run:
                     if render:
-                        clock.tick(100)
+                        clock.tick(30)
                         for event in pygame.event.get():
                             if event.type == pygame.QUIT:
                                 run = False
@@ -174,13 +174,14 @@ class PongGame:
                     q_ai_2.q(action_p2, r2, state_p2, new_state_p2)
 
                     # reset on
-                    if winner > 0:
+                    if r1 == 1 or r2 == 1:
                         rewards_in_a_row += 1
                         if rewards_in_a_row == reset_on:
                             self.game.ball.reset()
                             rewards_in_a_row = 0
-                    elif winner < 0:
-                        rewards_in_a_row = 0
+                    # elif winner < 0:
+                    #    rewards_in_a_row = 0
+
                     # pad1
                     if abs(r1) > 0:
                         self.enqueue(rewards_queue1, r1)
@@ -263,14 +264,14 @@ def main():
     pong = PongGame(win, WIDTH, HEIGHT)
 
     for m in [(4, 4)]:
-        for reseton in [5]:
-            for visits in [10]:
+        for reseton in [10]:
+            for visits in [12]:
                 for lr in [1]:
                     for neg in [False]:
                         pong.Q_learning_algorithm(
                             epochs=600, episodes=20000, discount_rate=0.97, lr=lr,
                             negative_propagation=neg, visits_threshold=visits,
-                            reset_on=reseton, render=True, Action_method=m, exploration_rate=1)
+                            reset_on=reseton, render=False, Action_method=m, exploration_rate=1)
 
 
 main()

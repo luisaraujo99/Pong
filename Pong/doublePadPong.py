@@ -273,12 +273,20 @@ class DoublePadPong:
             pygame.draw.rect(self.window, self.GREY,
                              (0, y, self.window_width, 1))
 
+    def drawMidLine(self):
+        pygame.draw.rect(self.window, self.CYAN,
+                         (0, self.window_height/2, self.window_width, 1))
+
+        pygame.draw.circle(self.window, self.CYAN,
+                           (self.window_width/2, self.window_height/2), 8)
+
     def draw(self):
         self.window.fill(self.BLACK)
         self.draw_score()
         self.paddle1.draw(self.window)
         self.paddle2.draw(self.window)
         self.ball.draw(self.window)
+        self.drawMidLine()
         # self.drawGrid()
 
     def loop(self):
