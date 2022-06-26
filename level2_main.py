@@ -9,14 +9,15 @@ import pygame
 from alive_progress import alive_bar
 import operator
 import os
+from pygame_recorder import ScreenRecorder
 os.environ['SDL_VIDEODRIVER'] = 'dummy'
 plt.rc('xtick', labelsize=7)
 plt.rc('ytick', labelsize=7)
-
+FPS = 50
 
 WIDTH_SCALE, HEIGHT_SCALE = 20, 20
-GAME_DIM_X, GAME_DIM_Y = 30, 40
-PAD_SIZE = 8
+GAME_DIM_X, GAME_DIM_Y = 20, 40
+PAD_SIZE = 6
 WIDTH, HEIGHT = GAME_DIM_X*WIDTH_SCALE, GAME_DIM_Y*HEIGHT_SCALE
 X_PAD_DIM = GAME_DIM_X-(PAD_SIZE-1)
 GREEDY, EPS_GREEDY, STATE_LOC_GREEDY, WIND_LOC_GREEDY = 1, 2, 3, 4
@@ -73,14 +74,17 @@ class PongGame:
 
         ###### Declaring Q_AI Instances ######
         q_ai_1 = Q_AI(learning_rate=lr, discount_rate=0.97, X_Pad_dim=GAME_DIM_X -
-                      (PAD_SIZE-1), X_Grid_dim=GAME_DIM_X+1, Y_Grid_Dim=GAME_DIM_Y-1, seed=np.random.default_rng(12022))
+                      (PAD_SIZE-1), X_Grid_dim=GAME_DIM_X+1, Y_Grid_Dim=GAME_DIM_Y-1, seed=np.random.default_rng(22022))
 
         q_ai_2 = Q_AI(learning_rate=lr, discount_rate=0.97, X_Pad_dim=GAME_DIM_X -
-                      (PAD_SIZE-1), X_Grid_dim=GAME_DIM_X+1, Y_Grid_Dim=GAME_DIM_Y-1, seed=np.random.default_rng(22022))
+                      (PAD_SIZE-1), X_Grid_dim=GAME_DIM_X+1, Y_Grid_Dim=GAME_DIM_Y-1, seed=np.random.default_rng(12022))
 
         # create paths to save files
         self.create_paths(Action_method[0])
         self.create_paths(Action_method[1])
+
+        if render:
+            recorder = ScreenRecorder(WIDTH, HEIGHT, FPS)
 
         filename1 = "./level2_results/X={x}Y={y}/{method}P1_epochs={e}_vt={vt}_reseton={reset_on}_lr={lr}_dr={dr}_negprop={np}.txt".format(
             x=GAME_DIM_X, y=GAME_DIM_Y, m=Action_method, e=epochs,
@@ -124,7 +128,8 @@ class PongGame:
 
                 while episode < episodes and run:
                     if render:
-                        clock.tick(30)
+                        recorder.capture_frame(self.game.window)
+                        clock.tick(FPS)
                         for event in pygame.event.get():
                             if event.type == pygame.QUIT:
                                 run = False
@@ -168,19 +173,19 @@ class PongGame:
                     r1, r2, winner = self.game.loop()
                     new_state_p1 = ((self.paddle1.x//WIDTH_SCALE), (self.ball.y //
                                                                     HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
-                    new_state_p2 = ((self.paddle1.x//WIDTH_SCALE), (self.ball.y //
+                    new_state_p2 = ((self.paddle2.x//WIDTH_SCALE), (self.ball.y //
                                                                     HEIGHT_SCALE), (self.ball.x//WIDTH_SCALE))
                     q_ai_1.q(action_p1, r1, state_p1, new_state_p1)
                     q_ai_2.q(action_p2, r2, state_p2, new_state_p2)
 
                     # reset on
-                    if r1 == 1 or r2 == 1:
+                    if winner > 0:
                         rewards_in_a_row += 1
                         if rewards_in_a_row == reset_on:
                             self.game.ball.reset()
                             rewards_in_a_row = 0
-                    # elif winner < 0:
-                    #    rewards_in_a_row = 0
+                    elif winner < 0:
+                        rewards_in_a_row = 0
 
                     # pad1
                     if abs(r1) > 0:
@@ -233,6 +238,9 @@ class PongGame:
 
                 # iteration
                 epoch += 1
+                if epoch > 3:
+                    q_ai_1.learning_rate_decay(epoch, 0.05)
+                    q_ai_2.learning_rate_decay(epoch, 0.05)
 
                 # save Q state
                 q_ai_1.save_state(filename=filename1)
@@ -240,7 +248,7 @@ class PongGame:
 
                 # show training evolution
                 bar.text(
-                    f'\n-> Exploration rate: {q_ai_1.exploration_rate}')
+                    f'\n-> ER1: {round(q_ai_1.exploration_rate,2)} ER2: {round(q_ai_2.exploration_rate,2)} LR: {round(q_ai_2.learning_rate,2)}')
                 bar()
 
         X, Y, Z, _ = q_ai_1.q_matrix.shape
@@ -255,6 +263,8 @@ class PongGame:
             plot_v(X*Y*Z, epochs, v_max_mean2,
                    v_min_mean2, v_mid_mean2, softmax2, rewards2, exploration_rates2, states_visited_ratio2, maximum_rec_val2, filename2.replace('txt', 'png'))
         # close pygame env
+        if render:
+            recorder.end_recording()
         pygame.quit()
 
 
@@ -265,13 +275,12 @@ def main():
 
     for m in [(4, 4)]:
         for reseton in [10]:
-            for visits in [12]:
+            for visits in [15]:
                 for lr in [1]:
-                    for neg in [False]:
-                        pong.Q_learning_algorithm(
-                            epochs=600, episodes=20000, discount_rate=0.97, lr=lr,
-                            negative_propagation=neg, visits_threshold=visits,
-                            reset_on=reseton, render=False, Action_method=m, exploration_rate=1)
+                    pong.Q_learning_algorithm(
+                        epochs=120, episodes=50000, discount_rate=0.98, lr=lr,
+                        negative_propagation=False, visits_threshold=visits,
+                        reset_on=reseton, render=True, Action_method=m, exploration_rate=1)
 
 
 main()

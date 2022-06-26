@@ -15,9 +15,9 @@ class Paddle:
         self.VERT_PAD_HEIGHT = width
         self.VEL = vel
 
-    def draw(self, win):
+    def draw(self, win, color):
         pygame.draw.rect(
-            win, WHITE, (self.x, self.y, self.width, self.height))
+            win, color, (self.x, self.y, self.width, self.height))
 
     def move(self, isFourPongPad=False, positive=True, **kwargs):
 

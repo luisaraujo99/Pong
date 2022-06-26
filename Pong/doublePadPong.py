@@ -16,6 +16,7 @@ class DoublePadPong:
     WHITE = (255, 255, 255)
     GREY = (128, 128, 128)
     CYAN = (0, 255, 255)
+    GREEN = (124, 252, 0)
     BLACK = (0, 0, 0)
     SCORE_FONT = pygame.font.SysFont("comicsans", 50)
 
@@ -39,7 +40,7 @@ class DoublePadPong:
 
     def draw_score(self):
         score_text1 = self.SCORE_FONT.render(f"{self.score[0]}", 1, self.CYAN)
-        score_text2 = self.SCORE_FONT.render(f"{self.score[1]}", 1, self.CYAN)
+        score_text2 = self.SCORE_FONT.render(f"{self.score[1]}", 1, self.GREEN)
         self.window.blit(score_text1, (15, 60))
         self.window.blit(score_text2, (15, self.window_height-90))
 
@@ -83,14 +84,12 @@ class DoublePadPong:
         ''' paddle_reward = 1 means Paddle1 caught the ball  '''
         ''' paddle_reward = -1 means Paddle1 did not catch the ball  '''
         if type == COMP:
-            if paddle_reward == 1:
-                return (1, 0, paddle_reward)
-            if paddle_reward == 2:
-                return (0, 1, paddle_reward)
-            if paddle_reward == -1:
-                return (-1, 10, paddle_reward)
-            if paddle_reward == -2:
-                return (10, -1, paddle_reward)
+            if paddle_reward in [-2]:
+                return (0, -1, paddle_reward)
+            if paddle_reward in [2]:
+                return (-1, 0, paddle_reward)
+            else:
+                return (0, 0, paddle_reward)
         if type == COOPERATION:
             if paddle_reward == 1:
                 return (10, 1, paddle_reward)
@@ -283,8 +282,8 @@ class DoublePadPong:
     def draw(self):
         self.window.fill(self.BLACK)
         self.draw_score()
-        self.paddle1.draw(self.window)
-        self.paddle2.draw(self.window)
+        self.paddle1.draw(self.window, self.CYAN)
+        self.paddle2.draw(self.window, self.GREEN)
         self.ball.draw(self.window)
         self.drawMidLine()
         # self.drawGrid()
@@ -292,10 +291,10 @@ class DoublePadPong:
     def loop(self):
         reward = self.handle_collision()
         # competetive
-        if reward[0] < 0:
+        if reward[2] == -1:
             self.score = tuple(
                 map(operator.add, self.score, (0, 1)))
-        elif reward[1] < 0:
+        elif reward[2] == -2:
             self.score = tuple(
                 map(operator.add, self.score, (1, 0)))
         return reward
