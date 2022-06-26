@@ -17,8 +17,9 @@ class FourPadPong:
     WHITE = (255, 255, 255)
     GREY = (211, 211, 211)
     CYAN = (0, 255, 255)
+    GREEN = (124,252,0)
     BLACK = (0, 0, 0)
-    SCORE_FONT = pygame.font.SysFont("comicsans", 45)
+    SCORE_FONT = pygame.font.SysFont("comicsans", 25)
 
     def __init__(self, window, window_width, window_height, width_scale, height_scale, PAD_SIZE, GAME_DIM_X, GAME_DIM_Y):
         self.window_width = window_width
@@ -83,12 +84,12 @@ class FourPadPong:
                 if x_vel == 0:
                     x_vel = self.ball.original_x_vel
                 x_vel = abs(x_vel)*(int(ball_distance_paddle_x))
-                y_vel = -y_vel*(int(ball_distance_paddle_x))
+                #y_vel = -y_vel*(int(ball_distance_paddle_x))
             if ball_distance_paddle_x > 0:
                 if x_vel == 0:
                     x_vel = self.ball.original_x_vel
                 x_vel = abs(x_vel)*(int(ball_distance_paddle_x))
-                y_vel = y_vel*(int(ball_distance_paddle_x))
+                #y_vel = y_vel*(int(ball_distance_paddle_x))
             if ball_distance_paddle_x == 0:
                 x_vel = 0
         # code for pad 3 and 4
@@ -97,12 +98,12 @@ class FourPadPong:
                 if y_vel == 0:
                     y_vel = self.ball.original_y_vel
                 y_vel = abs(y_vel)*(int(ball_distance_paddle_y))
-                x_vel = -x_vel*(int(ball_distance_paddle_y))
+                #x_vel = -x_vel*(int(ball_distance_paddle_y))
             if ball_distance_paddle_y > 0:
                 if y_vel == 0:
                     y_vel = self.ball.original_y_vel
                 y_vel = abs(y_vel)*(int(ball_distance_paddle_y))
-                x_vel = x_vel*(int(ball_distance_paddle_y))
+                #x_vel = x_vel*(int(ball_distance_paddle_y))
             if ball_distance_paddle_y == 0:
                 y_vel = 0
 
@@ -121,16 +122,19 @@ class FourPadPong:
         ''' function used to create a reward to manipulate the way the paddles behave '''
         ''' paddle_reward = 1 means Paddle1 caught the ball  '''
         ''' paddle_reward = -1 means Paddle1 did not catch the ball  '''
+        # coop mode all pads
         if type == COOPERATION:
-            if paddle_reward == 1 or paddle_reward == 2 or paddle_reward == 3 or paddle_reward == 4:
-                return (1, 1, 1, 1, paddle_reward)
-            if paddle_reward == -3 or paddle_reward == -4 or paddle_reward == -1 or paddle_reward == -2:
-                return (-1, -1, -1, -1, paddle_reward)
+            if paddle_reward  in [1,2,3,4] :
+                return (0,0,0,0, paddle_reward)
+            if paddle_reward  in [-1,-2,-3,-4] :
+                return (-1,-1,-1,-1, paddle_reward)
+            
+        # coop mode
         if type == TEAM_COOPERATION:
-            if paddle_reward == 1 or paddle_reward == 2 or paddle_reward == -3 or paddle_reward == -4:
-                return (1, 1, -1, -1, paddle_reward)
-            if paddle_reward == 3 or paddle_reward == 4 or paddle_reward == -1 or paddle_reward == -2:
-                return (-1, -1, 1, 1, paddle_reward)
+            if paddle_reward  in [-1,-2] :
+                return (0,0,1,1, paddle_reward)
+            if paddle_reward  in [-3,-4] :
+                return (1,1,0,0, paddle_reward)
         if type == PERSONALITY_COOPERATION:
             if paddle_reward == 1 or paddle_reward == 2 or paddle_reward == -3 or paddle_reward == -4:
                 return (10, 10, -1, -1, paddle_reward)
@@ -252,10 +256,10 @@ class FourPadPong:
     def draw(self):
         self.window.fill(self.BLACK)
         self.draw_score()
-        self.paddle1.draw(self.window)
-        self.paddle2.draw(self.window)
-        self.paddle3.draw(self.window)
-        self.paddle4.draw(self.window)
+        self.paddle1.draw(self.window,color=self.CYAN)
+        self.paddle2.draw(self.window,color=self.CYAN)
+        self.paddle3.draw(self.window,color=self.GREEN)
+        self.paddle4.draw(self.window,color=self.GREEN)
         self.ball.draw(self.window)
         # self.drawGrid()
 

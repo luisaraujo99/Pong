@@ -17,3 +17,8 @@ level1_results/
 level2_results/
 level3_results/
 Pong/__pycache__/PlotTool.cpython-39.pyc
+pygame_recorder-master/requirements.txt
+pygame_recorder-master/README.md
+pygame_recorder.py
+pygame_recorder-master/LICENSE
+__pycache__/pygame_recorder.cpython-39.pyc
