@@ -17,7 +17,7 @@ class FourPadPong:
     WHITE = (255, 255, 255)
     GREY = (211, 211, 211)
     CYAN = (0, 255, 255)
-    GREEN = (124,252,0)
+    GREEN = (124, 252, 0)
     BLACK = (0, 0, 0)
     SCORE_FONT = pygame.font.SysFont("comicsans", 25)
 
@@ -124,17 +124,18 @@ class FourPadPong:
         ''' paddle_reward = -1 means Paddle1 did not catch the ball  '''
         # coop mode all pads
         if type == COOPERATION:
-            if paddle_reward  in [1,2,3,4] :
-                return (0,0,0,0, paddle_reward)
-            if paddle_reward  in [-1,-2,-3,-4] :
-                return (-1,-1,-1,-1, paddle_reward)
-            
+            if paddle_reward in [1, 2, 3, 4]:
+                return (0, 0, 0, 0, paddle_reward)
+            if paddle_reward in [-1, -2, -3, -4]:
+                return (-1, -1, -1, -1, paddle_reward)
+
         # coop mode
         if type == TEAM_COOPERATION:
-            if paddle_reward  in [-1,-2] :
-                return (0,0,1,1, paddle_reward)
-            if paddle_reward  in [-3,-4] :
-                return (1,1,0,0, paddle_reward)
+            if paddle_reward in [-1, -2]:
+                return (0, 0, 1, 1, paddle_reward)
+            if paddle_reward in [-3, -4]:
+                return (1, 1, 0, 0, paddle_reward)
+
         if type == PERSONALITY_COOPERATION:
             if paddle_reward == 1 or paddle_reward == 2 or paddle_reward == -3 or paddle_reward == -4:
                 return (10, 10, -1, -1, paddle_reward)
@@ -256,10 +257,10 @@ class FourPadPong:
     def draw(self):
         self.window.fill(self.BLACK)
         self.draw_score()
-        self.paddle1.draw(self.window,color=self.CYAN)
-        self.paddle2.draw(self.window,color=self.CYAN)
-        self.paddle3.draw(self.window,color=self.GREEN)
-        self.paddle4.draw(self.window,color=self.GREEN)
+        self.paddle1.draw(self.window, color=self.CYAN)
+        self.paddle2.draw(self.window, color=self.CYAN)
+        self.paddle3.draw(self.window, color=self.GREEN)
+        self.paddle4.draw(self.window, color=self.GREEN)
         self.ball.draw(self.window)
         # self.drawGrid()
 

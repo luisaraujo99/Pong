@@ -12,14 +12,13 @@ plt.rc('xtick', labelsize=7)
 plt.rc('ytick', labelsize=7)
 os.environ['SDL_VIDEODRIVER'] = 'dummy'
 
-WIDTH_SCALE, HEIGHT_SCALE = 20,20
-GAME_DIM_X, GAME_DIM_Y =30,30
+WIDTH_SCALE, HEIGHT_SCALE = 20, 20
+GAME_DIM_X, GAME_DIM_Y = 30, 30
 PAD_SIZE = 6
 WIDTH, HEIGHT = GAME_DIM_X*WIDTH_SCALE, GAME_DIM_Y*HEIGHT_SCALE
 X_PAD_DIM = GAME_DIM_X-(PAD_SIZE-1)
 GREEDY, EPS_GREEDY, STATE_LOC_GREEDY, WIND_LOC_GREEDY = 1, 2, 3, 4
 FPS = 50
-
 
 
 class PongGame:
@@ -280,13 +279,20 @@ class PongGame:
                     # q_ai_1.exploration_rate_decay(time, episodes*epochs)
                     # q_ai_2.exploration_rate_decay(time, episodes*epochs)
                     q_ai_1.set_exploration_rate_decay(
-                        ((q_ai_1.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]) < visits_threshold).sum()/(q_ai_1.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]).size)
+                        ((q_ai_1.q_matrix_counter[1:GAME_DIM_X -
+                                                  (PAD_SIZE-2), 1:GAME_DIM_Y-1, :1:GAME_DIM_X-1]) < visits_threshold).sum()/(q_ai_1.q_matrix_counter[1:GAME_DIM_X - (PAD_SIZE-2), 1:GAME_DIM_Y-1, :1:GAME_DIM_X-1]).size)
                     q_ai_2.set_exploration_rate_decay(
-                        ((q_ai_2.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]) < visits_threshold).sum()/(q_ai_2.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]).size)
+                        ((q_ai_2.q_matrix_counter[1:GAME_DIM_X -
+                                                  (PAD_SIZE-2), 1:GAME_DIM_Y-1, :1:GAME_DIM_X-1]) < visits_threshold).sum()/(q_ai_2.q_matrix_counter[1:GAME_DIM_X -
+                                                  (PAD_SIZE-2), 1:GAME_DIM_Y-1, :1:GAME_DIM_X-1]).size)
                     q_ai_3.set_exploration_rate_decay(
-                        ((q_ai_3.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]) < visits_threshold).sum()/(q_ai_3.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]).size)
+                        ((q_ai_3.q_matrix_counter[1:GAME_DIM_X -
+                                                  (PAD_SIZE-2), 1:GAME_DIM_Y-1, :1:GAME_DIM_X-1]) < visits_threshold).sum()/(q_ai_3.q_matrix_counter[1:GAME_DIM_X -
+                                                                                                                                                     (PAD_SIZE-2), 1:GAME_DIM_Y-1, :1:GAME_DIM_X-1]).size)
                     q_ai_4.set_exploration_rate_decay(
-                        ((q_ai_4.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]) < visits_threshold).sum()/(q_ai_4.q_matrix_counter[:, 1:GAME_DIM_Y-1, :]).size)
+                        ((q_ai_4.q_matrix_counter[1:GAME_DIM_X -
+                                                  (PAD_SIZE-2), 1:GAME_DIM_Y-1, :1:GAME_DIM_X-1]) < visits_threshold).sum()/(q_ai_4.q_matrix_counter[1:GAME_DIM_X -
+                                                                                                                                                     (PAD_SIZE-2), 1:GAME_DIM_Y-1, :1:GAME_DIM_X-1]).size)
                     # iteration
                     episode += 1
                     time += 1
@@ -332,10 +338,10 @@ class PongGame:
                 # iteration
                 epoch += 1
                 if epoch > 15:
-                    q_ai_1.learning_rate_decay(epoch,0.1)
-                    q_ai_2.learning_rate_decay(epoch,0.1)
-                    q_ai_3.learning_rate_decay(epoch,0.1)
-                    q_ai_4.learning_rate_decay(epoch,0.1)
+                    q_ai_1.learning_rate_decay(epoch, 0.05)
+                    q_ai_2.learning_rate_decay(epoch, 0.05)
+                    q_ai_3.learning_rate_decay(epoch, 0.05)
+                    q_ai_4.learning_rate_decay(epoch, 0.05)
 
                 # save Q state
                 q_ai_1.save_state(filename=filenames[0])
@@ -380,12 +386,12 @@ def main():
     pong = PongGame(win, WIDTH, HEIGHT)
 
     for m in [(4, 4, 4, 4)]:
-        for reseton in [8]:
-            for visits in [18]:
+        for reseton in [6]:
+            for visits in [15]:
                 for lr in [1]:
                     for neg in [False]:
                         pong.Q_learning_algorithm(
-                            epochs=80, episodes=50000, discount_rate=0.97, lr=lr,
+                            epochs=100, episodes=50000, discount_rate=0.97, lr=lr,
                             negative_propagation=neg, visits_threshold=visits,
                             reset_on=reseton, render=False, Action_method=m, exploration_rate=1)
 
