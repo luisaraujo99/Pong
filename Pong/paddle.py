@@ -3,7 +3,7 @@ import pygame
 WHITE = (255, 255, 255)
 
 
-class Paddle:    
+class Paddle:
 
     def __init__(self, x, y, width, height, vertical, vel):
         self.x = self.original_x = x
@@ -15,7 +15,7 @@ class Paddle:
         self.VERT_PAD_HEIGHT = width
         self.VEL = vel
 
-    def draw(self, win,color):
+    def draw(self, win, color):
         pygame.draw.rect(
             win, color, (self.x, self.y, self.width, self.height))
 
